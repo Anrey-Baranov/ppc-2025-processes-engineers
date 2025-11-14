@@ -1,0 +1,15 @@
+#pragma once
+
+#include <string>
+#include <tuple>
+
+#include "task/include/task.hpp"
+
+namespace baranov_a_sign_alternations {
+
+using InType = int;
+using OutType = int;
+using TestType = std::tuple<int, std::string>;
+using BaseTask = ppc::task::Task<InType, OutType>;
+
+}  // namespace baranov_a_sign_alternations
