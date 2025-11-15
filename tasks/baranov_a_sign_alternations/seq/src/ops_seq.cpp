@@ -15,46 +15,39 @@ BaranovASignAlternationsSEQ::BaranovASignAlternationsSEQ(const InType &in) {
 }
 
 bool BaranovASignAlternationsSEQ::ValidationImpl() {
-  return (GetInput() > 0) && (GetOutput() == 0);
+  return !GetInput().empty() && (GetOutput() == 0);
 }
 
 bool BaranovASignAlternationsSEQ::PreProcessingImpl() {
-  GetOutput() = 2 * GetInput();
-  return GetOutput() > 0;
+  return true;
 }
 
 bool BaranovASignAlternationsSEQ::RunImpl() {
-  if (GetInput() == 0) {
-    return false;
+  const auto &input = GetInput();
+
+  if (input.size() < 2) {
+    GetOutput() = 0;
+    return true;
   }
 
-  for (InType i = 0; i < GetInput(); i++) {
-    for (InType j = 0; j < GetInput(); j++) {
-      for (InType k = 0; k < GetInput(); k++) {
-        std::vector<InType> tmp(i + j + k, 1);
-        GetOutput() += std::accumulate(tmp.begin(), tmp.end(), 0);
-        GetOutput() -= i + j + k;
+  int alternations_count = 0;
+  for (size_t i = 0; i < input.size() - 1; i++) {
+    int current = input[i];
+    int next = input[i + 1];
+
+    if (current != 0 && next != 0) {
+      if ((current > 0 && next < 0) || (current < 0 && next > 0)) {
+        alternations_count++;
       }
     }
   }
 
-  const int num_threads = ppc::util::GetNumThreads();
-  GetOutput() *= num_threads;
-
-  int counter = 0;
-  for (int i = 0; i < num_threads; i++) {
-    counter++;
-  }
-
-  if (counter != 0) {
-    GetOutput() /= counter;
-  }
-  return GetOutput() > 0;
+  GetOutput() = alternations_count;
+  return true;
 }
 
 bool BaranovASignAlternationsSEQ::PostProcessingImpl() {
-  GetOutput() -= GetInput();
-  return GetOutput() > 0;
+  return true;
 }
 
 }  // namespace baranov_a_sign_alternations

@@ -17,56 +17,76 @@ BaranovASignAlternationsMPI::BaranovASignAlternationsMPI(const InType &in) {
 }
 
 bool BaranovASignAlternationsMPI::ValidationImpl() {
-  return (GetInput() > 0) && (GetOutput() == 0);
+  return !GetInput().empty() && (GetOutput() == 0);
 }
 
 bool BaranovASignAlternationsMPI::PreProcessingImpl() {
-  GetOutput() = 2 * GetInput();
-  return GetOutput() > 0;
+  return true;
 }
 
 bool BaranovASignAlternationsMPI::RunImpl() {
-  auto input = GetInput();
-  if (input == 0) {
-    return false;
+  const auto &input = GetInput();
+  int total_alternations = 0;
+
+  int world_size, world_rank = 0;
+  MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+
+  if (input.size() < 2) {
+    if (world_rank == 0) {
+      GetOutput() = 0;
+    }
+    return true;
   }
 
-  for (InType i = 0; i < GetInput(); i++) {
-    for (InType j = 0; j < GetInput(); j++) {
-      for (InType k = 0; k < GetInput(); k++) {
-        std::vector<InType> tmp(i + j + k, 1);
-        GetOutput() += std::accumulate(tmp.begin(), tmp.end(), 0);
-        GetOutput() -= i + j + k;
+  int pairs_count = input.size() - 1;
+  int pairs_per_process = pairs_count / world_size;
+  int remainder = pairs_count % world_size;
+  int start_pair, end_pair;
+
+  if (world_rank < remainder) {
+    start_pair = world_rank * (pairs_per_process + 1);
+    end_pair = start_pair + pairs_per_process + 1;
+  } else {
+    start_pair = remainder * (pairs_per_process + 1) + (world_rank - remainder) * pairs_per_process;
+    end_pair = start_pair + pairs_per_process;
+  }
+
+  int locale_alternations = 0;
+  for (int i = start_pair; i < end_pair && i < pairs_count; i++) {
+    int current = input[i];
+    int next = input[i + 1];
+
+    if (current != 0 && next != 0) {
+      if ((current > 0 && next < 0) || (current < 0 && next > 0)) {
+        locale_alternations++;
       }
     }
   }
 
-  const int num_threads = ppc::util::GetNumThreads();
-  GetOutput() *= num_threads;
+  if (world_rank == 0) {
+    total_alternations = locale_alternations;
 
-  int rank = 0;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    for (int i = 1; i < world_size; i++) {
+      int received_alternations;
+      MPI_Recv(&received_alternations, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      total_alternations += received_alternations;
+    }
 
-  if (rank == 0) {
-    GetOutput() /= num_threads;
+    GetOutput() = total_alternations;
+
   } else {
-    int counter = 0;
-    for (int i = 0; i < num_threads; i++) {
-      counter++;
-    }
-
-    if (counter != 0) {
-      GetOutput() /= counter;
-    }
+    MPI_Send(&locale_alternations, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
-  return GetOutput() > 0;
+  return true;
 }
 
+  
+
 bool BaranovASignAlternationsMPI::PostProcessingImpl() {
-  GetOutput() -= GetInput();
-  return GetOutput() > 0;
+  return true;
 }
 
 }  // namespace baranov_a_sign_alternations

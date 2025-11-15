@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <random>
 
 #include "baranov_a_sign_alternations/common/include/common.hpp"
 #include "baranov_a_sign_alternations/mpi/include/ops_mpi.hpp"
@@ -7,24 +8,34 @@
 
 namespace baranov_a_sign_alternations {
 
-class ExampleRunPerfTestProcesses : public ppc::util::BaseRunPerfTests<InType, OutType> {
-  const int kCount_ = 100;
-  InType input_data_{};
-
+class BaranovASignAlternationsPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
+  
   void SetUp() override {
-    input_data_ = kCount_;
+    int size = 1000000;
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(-100, 100);
+
+    input_data_.resize(size);
+    for (int i = 0; i < size; i++) {
+      input_data_[i] = dis(gen);
+    }
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
-    return input_data_ == output_data;
+    return output_data >= 0;
   }
 
   InType GetTestInputData() final {
     return input_data_;
   }
+
+ private:
+  InType input_data_;
 };
 
-TEST_P(ExampleRunPerfTestProcesses, RunPerfModes) {
+TEST_P(BaranovASignAlternationsPerfTests, RunPerfModes) {
   ExecuteTest(GetParam());
 }
 
@@ -33,8 +44,8 @@ const auto kAllPerfTasks =
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 
-const auto kPerfTestName = ExampleRunPerfTestProcesses::CustomPerfTestName;
+const auto kPerfTestName = BaranovASignAlternationsPerfTests::CustomPerfTestName;
 
-INSTANTIATE_TEST_SUITE_P(RunModeTests, ExampleRunPerfTestProcesses, kGtestValues, kPerfTestName);
+INSTANTIATE_TEST_SUITE_P(RunModeTests, BaranovASignAlternationsPerfTests, kGtestValues, kPerfTestName);
 
 }  // namespace baranov_a_sign_alternations
