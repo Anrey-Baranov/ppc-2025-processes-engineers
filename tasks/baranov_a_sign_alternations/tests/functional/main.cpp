@@ -87,6 +87,6 @@ const auto kPerfTestName = BaranovASignAternationsFuncTests::PrintFuncTestName<B
 
 INSTANTIATE_TEST_SUITE_P(SignAlternationsTests, BaranovASignAternationsFuncTests, kGtestValues, kPerfTestName);
 
-}  // namespace
+}
 
 }  // namespace baranov_a_sign_alternations

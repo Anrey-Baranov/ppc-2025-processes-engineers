@@ -31,6 +31,7 @@ bool BaranovASignAlternationsSEQ::RunImpl() {
   }
 
   int alternations_count = 0;
+
   for (size_t i = 0; i < input.size() - 1; i++) {
     int current = input[i];
     int next = input[i + 1];
@@ -39,6 +40,7 @@ bool BaranovASignAlternationsSEQ::RunImpl() {
       if ((current > 0 && next < 0) || (current < 0 && next > 0)) {
         alternations_count++;
       }
+    } else {
     }
   }
 
