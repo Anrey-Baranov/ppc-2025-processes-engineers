@@ -9,6 +9,35 @@
 
 namespace baranov_a_sign_alternations {
 
+namespace {
+int CountAlternationsInRange(const std::vector<int> input, int start, int end) {
+  int count = 0;
+  for (int i = start; i < end && i < static_cast<int>(input.size()) - 1; i++) {
+    int current = input[i];
+    int next = input[i + 1];
+    if (current != 0 && next != 0) {
+      if ((current > 0 && next < 0) || (current < 0 && next > 0)) {
+        count++;
+      }
+    }
+  }
+  return count;
+}
+
+void CalculateChunkBounds(int world_rank, int world_size, int pairs_count, int &start_pair, int &end_pair) {
+  int pairs_per_process = pairs_count / world_size;
+  int remainder = pairs_count % world_size;
+
+  if (world_rank < remainder) {
+    start_pair = world_rank * (pairs_per_process + 1);
+    end_pair = start_pair + pairs_per_process + 1;
+  } else {
+    start_pair = (remainder * (pairs_per_process + 1)) + ((world_rank - remainder) * pairs_per_process);
+    end_pair = start_pair + pairs_per_process;
+  }
+}
+}  // namespace
+
 BaranovASignAlternationsMPI::BaranovASignAlternationsMPI(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
   GetInput() = in;
@@ -41,17 +70,8 @@ bool BaranovASignAlternationsMPI::RunImpl() {
 
   if (pairs_count < world_size) {
     int alternations_count = 0;
-
     if (world_rank == 0) {
-      for (std::size_t i = 0; i < input.size() - 1; i++) {
-        int current = input[i];
-        int next = input[i + 1];
-        if (current != 0 && next != 0) {
-          if ((current > 0 && next < 0) || (current < 0 && next > 0)) {
-            alternations_count++;
-          }
-        }
-      }
+      alternations_count = CountAlternationsInRange(input, 0, pairs_count);
     }
 
     MPI_Bcast(&alternations_count, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -60,30 +80,12 @@ bool BaranovASignAlternationsMPI::RunImpl() {
     return true;
   }
 
-  int pairs_per_process = pairs_count / world_size;
-  int remainder = pairs_count % world_size;
-
   int start_pair = 0;
   int end_pair = 0;
+  CalculateChunkBounds(world_rank, world_size, pairs_count, start_pair, end_pair);
 
-  if (world_rank < remainder) {
-    start_pair = world_rank * (pairs_per_process + 1);
-    end_pair = start_pair + pairs_per_process + 1;
-  } else {
-    start_pair = (remainder * (pairs_per_process + 1)) + ((world_rank - remainder) * pairs_per_process);
-    end_pair = start_pair + pairs_per_process;
-  }
-  int local_alternations = 0;
-  for (int i = start_pair; i < end_pair && i < pairs_count; i++) {
-    int current = input[i];
-    int next = input[i + 1];
+  int local_alternations = CountAlternationsInRange(input, start_pair, end_pair);
 
-    if (current != 0 && next != 0) {
-      if ((current > 0 && next < 0) || (current < 0 && next > 0)) {
-        local_alternations++;
-      }
-    }
-  }
   if (world_rank == 0) {
     int total_alternations = local_alternations;
 
@@ -94,6 +96,7 @@ bool BaranovASignAlternationsMPI::RunImpl() {
     }
 
     GetOutput() = total_alternations;
+
     for (int i = 1; i < world_size; i++) {
       MPI_Send(&total_alternations, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
     }
