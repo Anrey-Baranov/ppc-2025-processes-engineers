@@ -39,7 +39,6 @@ bool BaranovASignAlternationsSEQ::RunImpl() {
       if ((current > 0 && next < 0) || (current < 0 && next > 0)) {
         alternations_count++;
       }
-    } else {
     }
   }
 

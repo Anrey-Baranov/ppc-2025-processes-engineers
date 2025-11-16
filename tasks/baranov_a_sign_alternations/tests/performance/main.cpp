@@ -19,7 +19,14 @@ class BaranovASignAlternationsPerfTests : public ppc::util::BaseRunPerfTests<InT
 
     input_data_.resize(size);
     for (int i = 0; i < size; i++) {
-      input_data_[i] = dis(gen);
+      if (i % 3 == 0) {
+        input_data_[i] = std::abs(dis(gen)) + 1;
+      } else if (i % 3 == 1) {
+        input_data_[i] = std::abs(dis(gen)) - 1;
+      } else {
+        input_data_[i] = 0;
+      }
+
     }
   }
 

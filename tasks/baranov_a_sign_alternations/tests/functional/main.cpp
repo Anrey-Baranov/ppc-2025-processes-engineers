@@ -41,6 +41,34 @@ class BaranovASignAternationsFuncTests : public ppc::util::BaseRunFuncTests<InTy
         input_data_ = {1, -1, 1, 1, 2, -3};
         expected_output_ = 3;
         break;
+      case 5:
+        input_data_ = {-1, -2, -3, -4};
+        expected_output_ = 0;
+        break;
+      case 6:
+        input_data_ = {0, 1, 0, -1, 0, 2, 0, -2, 0};
+        expected_output_ = 2;
+        break;
+      case 7:
+        input_data_ = {1, 2, 3, -4};
+        expected_output_ = 1;
+        break;
+      case 8:
+        input_data_ = {};
+        expected_output_ = 0;
+        break;
+      case 9:
+        input_data_ = {1, -1};
+        expected_output_ = 1;
+        break;
+      case 10:
+        input_data_ = {1, 2};
+        expected_output_ = 0;
+        break;
+      case 11:
+        input_data_ = {0};
+        expected_output_ = 0;
+        break;
       default:
         input_data_ = {1, -1, 1, -1};
         expected_output_ = 3;
@@ -67,11 +95,18 @@ TEST_P(BaranovASignAternationsFuncTests, SignAlternationsTest) {
   ExecuteTest(GetParam());
 }
 
-const std::array<TestType, 4> kTestParam = {
+const std::array<TestType, 11> kTestParam = {
     std::make_tuple(1, "simple_alternations"),
     std::make_tuple(2, "with_zero"),
     std::make_tuple(3, "all_positive"),
     std::make_tuple(4, "hard_vector"),
+    std::make_tuple(5, "all_negative"),
+    std::make_tuple(6, "multiple_zeros"),
+    std::make_tuple(7, "single_alternation"),
+    std::make_tuple(8, "empty_vector"),
+    std::make_tuple(9, "two_elements_with_alternation"),
+    std::make_tuple(10, "two_elements_no_alternation"),
+    std::make_tuple(11, "only_one_zero"),
 };
 
 const auto kTestTasksList = std::tuple_cat(
