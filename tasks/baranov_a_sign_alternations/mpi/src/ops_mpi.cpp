@@ -1,7 +1,7 @@
 #include "baranov_a_sign_alternations/mpi/include/ops_mpi.hpp"
 
 #include <mpi.h>
-
+#include <cstddef>
 #include <numeric>
 #include <vector>
 
