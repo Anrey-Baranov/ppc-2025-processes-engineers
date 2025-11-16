@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include <random>
 
 #include "baranov_a_sign_alternations/common/include/common.hpp"
@@ -9,7 +10,6 @@
 namespace baranov_a_sign_alternations {
 
 class BaranovASignAlternationsPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
-  
   void SetUp() override {
     int size = 1000000;
 
@@ -40,7 +40,8 @@ TEST_P(BaranovASignAlternationsPerfTests, RunPerfModes) {
 }
 
 const auto kAllPerfTasks =
-    ppc::util::MakeAllPerfTasks<InType, BaranovASignAlternationsMPI, BaranovASignAlternationsSEQ>(PPC_SETTINGS_baranov_a_sign_alternations);
+    ppc::util::MakeAllPerfTasks<InType, BaranovASignAlternationsMPI, BaranovASignAlternationsSEQ>(
+        PPC_SETTINGS_baranov_a_sign_alternations);
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 

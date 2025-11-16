@@ -76,15 +76,15 @@ TEST_P(BaranovASignAternationsFuncTests, SignAlternationsTest) {
 }
 
 const std::array<TestType, 4> kTestParam = {
-  std::make_tuple(1, "simple_alternations"),
-  std::make_tuple(2, "with_zero"),
-  std::make_tuple(3, "all_positive"),
-  std::make_tuple(4, "hard_vector"),
+    std::make_tuple(1, "simple_alternations"),
+    std::make_tuple(2, "with_zero"),
+    std::make_tuple(3, "all_positive"),
+    std::make_tuple(4, "hard_vector"),
 };
 
-const auto kTestTasksList =
-    std::tuple_cat(ppc::util::AddFuncTask<BaranovASignAlternationsMPI, InType>(kTestParam, PPC_SETTINGS_baranov_a_sign_alternations),
-                   ppc::util::AddFuncTask<BaranovASignAlternationsSEQ, InType>(kTestParam, PPC_SETTINGS_baranov_a_sign_alternations));
+const auto kTestTasksList = std::tuple_cat(
+    ppc::util::AddFuncTask<BaranovASignAlternationsMPI, InType>(kTestParam, PPC_SETTINGS_baranov_a_sign_alternations),
+    ppc::util::AddFuncTask<BaranovASignAlternationsSEQ, InType>(kTestParam, PPC_SETTINGS_baranov_a_sign_alternations));
 
 const auto kGtestValues = ppc::util::ExpandToValues(kTestTasksList);
 
@@ -92,6 +92,6 @@ const auto kPerfTestName = BaranovASignAternationsFuncTests::PrintFuncTestName<B
 
 INSTANTIATE_TEST_SUITE_P(SignAlternationsTests, BaranovASignAternationsFuncTests, kGtestValues, kPerfTestName);
 
-}
+}  // namespace
 
 }  // namespace baranov_a_sign_alternations
