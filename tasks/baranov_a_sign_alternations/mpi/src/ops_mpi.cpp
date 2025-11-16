@@ -2,7 +2,6 @@
 
 #include <mpi.h>
 
-#include <cstddef>
 #include <vector>
 
 #include "baranov_a_sign_alternations/common/include/common.hpp"

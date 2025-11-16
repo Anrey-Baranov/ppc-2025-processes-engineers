@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <cmath>
 #include <random>
 
 #include "baranov_a_sign_alternations/common/include/common.hpp"
