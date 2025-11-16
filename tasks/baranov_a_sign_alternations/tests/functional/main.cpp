@@ -45,6 +45,10 @@ class BaranovASignAternationsFuncTests : public ppc::util::BaseRunFuncTests<InTy
         input_data_ = {1, 2, 3, 4};
         expected_output_ = 0;
         break;
+      case 4:
+        input_data_ = {1, -1, 1, 1, 2, -3};
+        expected_output_ = 3;
+        break;
       default:
         input_data_ = {1, -1, 1, -1};
         expected_output_ = 3;
@@ -71,10 +75,11 @@ TEST_P(BaranovASignAternationsFuncTests, SignAlternationsTest) {
   ExecuteTest(GetParam());
 }
 
-const std::array<TestType, 3> kTestParam = {
+const std::array<TestType, 4> kTestParam = {
   std::make_tuple(1, "simple_alternations"),
   std::make_tuple(2, "with_zero"),
   std::make_tuple(3, "all_positive"),
+  std::make_tuple(4, "hard_vector"),
 };
 
 const auto kTestTasksList =
