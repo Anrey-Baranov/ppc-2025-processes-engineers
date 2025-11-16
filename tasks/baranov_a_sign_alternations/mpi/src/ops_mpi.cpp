@@ -9,7 +9,7 @@
 namespace baranov_a_sign_alternations {
 
 namespace {
-int CountAlternationsInRange(const std::vector<int> input, int start, int end) {
+int CountAlternationsInRange(const std::vector<int> &input, int start, int end) {
   int count = 0;
   for (int i = start; i < end && i < static_cast<int>(input.size()) - 1; i++) {
     int current = input[i];

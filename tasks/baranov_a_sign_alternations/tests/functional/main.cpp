@@ -84,7 +84,7 @@ class BaranovASignAternationsFuncTests : public ppc::util::BaseRunFuncTests<InTy
   }
 
  private:
-  InType input_data_{};
+  InType input_data_;
   OutType expected_output_{};
 };
 
