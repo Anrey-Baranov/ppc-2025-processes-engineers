@@ -3,7 +3,6 @@
 #include <mpi.h>
 
 #include <cstddef>
-#include <numeric>
 #include <vector>
 
 #include "baranov_a_sign_alternations/common/include/common.hpp"
@@ -71,7 +70,7 @@ bool BaranovASignAlternationsMPI::RunImpl() {
     start_pair = world_rank * (pairs_per_process + 1);
     end_pair = start_pair + pairs_per_process + 1;
   } else {
-    start_pair = remainder * (pairs_per_process + 1) + (world_rank - remainder) * pairs_per_process;
+    start_pair = (remainder * (pairs_per_process + 1)) + ((world_rank - remainder) * pairs_per_process);
     end_pair = start_pair + pairs_per_process;
   }
   int local_alternations = 0;
