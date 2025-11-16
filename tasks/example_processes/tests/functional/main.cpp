@@ -12,18 +12,15 @@
 #include <utility>
 #include <vector>
 
-#include "example_threads/all/include/ops_all.hpp"
-#include "example_threads/common/include/common.hpp"
-#include "example_threads/omp/include/ops_omp.hpp"
-#include "example_threads/seq/include/ops_seq.hpp"
-#include "example_threads/stl/include/ops_stl.hpp"
-#include "example_threads/tbb/include/ops_tbb.hpp"
+#include "example_processes/common/include/common.hpp"
+#include "example_processes/mpi/include/ops_mpi.hpp"
+#include "example_processes/seq/include/ops_seq.hpp"
 #include "util/include/func_test_util.hpp"
 #include "util/include/util.hpp"
 
-namespace nesterov_a_test_task_threads {
+namespace nesterov_a_test_task_processes {
 
-class NesterovARunFuncTestsThreads : public ppc::util::BaseRunFuncTests<InType, OutType, TestType> {
+class NesterovARunFuncTestsProcesses : public ppc::util::BaseRunFuncTests<InType, OutType, TestType> {
  public:
   static std::string PrintTestParam(const TestType &test_param) {
     return std::to_string(std::get<0>(test_param)) + "_" + std::get<1>(test_param);
@@ -37,7 +34,7 @@ class NesterovARunFuncTestsThreads : public ppc::util::BaseRunFuncTests<InType, 
     std::vector<uint8_t> img;
     // Read image
     {
-      std::string abs_path = ppc::util::GetAbsoluteTaskPath(std::string(PPC_ID_example_threads), "pic.jpg");
+      std::string abs_path = ppc::util::GetAbsoluteTaskPath(PPC_ID_example_processes, "pic.jpg");
       auto *data = stbi_load(abs_path.c_str(), &width, &height, &channels, 0);
       if (data == nullptr) {
         throw std::runtime_error("Failed to load image: " + std::string(stbi_failure_reason()));
@@ -67,25 +64,22 @@ class NesterovARunFuncTestsThreads : public ppc::util::BaseRunFuncTests<InType, 
 
 namespace {
 
-TEST_P(NesterovARunFuncTestsThreads, MatmulFromPic) {
+TEST_P(NesterovARunFuncTestsProcesses, MatmulFromPic) {
   ExecuteTest(GetParam());
 }
 
 const std::array<TestType, 3> kTestParam = {std::make_tuple(3, "3"), std::make_tuple(5, "5"), std::make_tuple(7, "7")};
 
 const auto kTestTasksList =
-    std::tuple_cat(ppc::util::AddFuncTask<NesterovATestTaskALL, InType>(kTestParam, PPC_SETTINGS_example_threads),
-                   ppc::util::AddFuncTask<NesterovATestTaskOMP, InType>(kTestParam, PPC_SETTINGS_example_threads),
-                   ppc::util::AddFuncTask<NesterovATestTaskSEQ, InType>(kTestParam, PPC_SETTINGS_example_threads),
-                   ppc::util::AddFuncTask<NesterovATestTaskSTL, InType>(kTestParam, PPC_SETTINGS_example_threads),
-                   ppc::util::AddFuncTask<NesterovATestTaskTBB, InType>(kTestParam, PPC_SETTINGS_example_threads));
+    std::tuple_cat(ppc::util::AddFuncTask<NesterovATestTaskMPI, InType>(kTestParam, PPC_SETTINGS_example_processes),
+                   ppc::util::AddFuncTask<NesterovATestTaskSEQ, InType>(kTestParam, PPC_SETTINGS_example_processes));
 
 const auto kGtestValues = ppc::util::ExpandToValues(kTestTasksList);
 
-const auto kPerfTestName = NesterovARunFuncTestsThreads::PrintFuncTestName<NesterovARunFuncTestsThreads>;
+const auto kPerfTestName = NesterovARunFuncTestsProcesses::PrintFuncTestName<NesterovARunFuncTestsProcesses>;
 
-INSTANTIATE_TEST_SUITE_P(PicMatrixTests, NesterovARunFuncTestsThreads, kGtestValues, kPerfTestName);
+INSTANTIATE_TEST_SUITE_P(PicMatrixTests, NesterovARunFuncTestsProcesses, kGtestValues, kPerfTestName);
 
 }  // namespace
 
-}  // namespace nesterov_a_test_task_threads
+}  // namespace nesterov_a_test_task_processes
