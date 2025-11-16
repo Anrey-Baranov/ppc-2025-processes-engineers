@@ -1,8 +1,9 @@
 #include "baranov_a_sign_alternations/seq/include/ops_seq.hpp"
 
+#include <cstddef>
 #include <numeric>
 #include <vector>
-#include <cstddef>
+
 #include "baranov_a_sign_alternations/common/include/common.hpp"
 #include "util/include/util.hpp"
 
