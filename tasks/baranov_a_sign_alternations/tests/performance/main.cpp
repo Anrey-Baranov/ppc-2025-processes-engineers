@@ -11,7 +11,7 @@ namespace baranov_a_sign_alternations {
 
 class BaranovASignAlternationsPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
   void SetUp() override {
-    int size = 1000000;
+    int size = 10000000;
 
     std::random_device rd;
     std::mt19937 gen(rd());

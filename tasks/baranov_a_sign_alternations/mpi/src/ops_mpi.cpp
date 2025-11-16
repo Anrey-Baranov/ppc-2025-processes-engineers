@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "baranov_a_sign_alternations/common/include/common.hpp"
-#include "util/include/util.hpp"
+
 
 namespace baranov_a_sign_alternations {
 
@@ -28,7 +28,8 @@ bool BaranovASignAlternationsMPI::PreProcessingImpl() {
 bool BaranovASignAlternationsMPI::RunImpl() {
   const auto &input = GetInput();
 
-  int world_size, world_rank;
+  int world_size = 0;
+  int world_rank = 0;
   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
   MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
@@ -38,13 +39,13 @@ bool BaranovASignAlternationsMPI::RunImpl() {
     return true;
   }
 
-  int pairs_count = input.size() - 1;
+  int pairs_count = static_cast<int>(input.size()) - 1;
 
   if (pairs_count < world_size) {
     int alternations_count = 0;
 
     if (world_rank == 0) {
-      for (size_t i = 0; i < input.size() - 1; i++) {
+      for (std::size_t i = 0; i < input.size() - 1; i++) {
         int current = input[i];
         int next = input[i + 1];
         if (current != 0 && next != 0) {
@@ -64,7 +65,8 @@ bool BaranovASignAlternationsMPI::RunImpl() {
   int pairs_per_process = pairs_count / world_size;
   int remainder = pairs_count % world_size;
 
-  int start_pair, end_pair;
+  int start_pair = 0;
+  int end_pair = 0;
 
   if (world_rank < remainder) {
     start_pair = world_rank * (pairs_per_process + 1);
@@ -88,7 +90,7 @@ bool BaranovASignAlternationsMPI::RunImpl() {
     int total_alternations = local_alternations;
 
     for (int i = 1; i < world_size; i++) {
-      int received_alternations;
+      int received_alternations = 0;
       MPI_Recv(&received_alternations, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       total_alternations += received_alternations;
     }
@@ -100,7 +102,7 @@ bool BaranovASignAlternationsMPI::RunImpl() {
   } else {
     MPI_Send(&local_alternations, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
 
-    int final_result;
+    int final_result = 0;
     MPI_Recv(&final_result, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     GetOutput() = final_result;
   }

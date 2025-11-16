@@ -1,22 +1,15 @@
 #include <gtest/gtest.h>
-#include <stb/stb_image.h>
 
-#include <algorithm>
 #include <array>
-#include <cstddef>
-#include <cstdint>
-#include <numeric>
-#include <stdexcept>
 #include <string>
 #include <tuple>
-#include <utility>
 #include <vector>
 
 #include "baranov_a_sign_alternations/common/include/common.hpp"
 #include "baranov_a_sign_alternations/mpi/include/ops_mpi.hpp"
 #include "baranov_a_sign_alternations/seq/include/ops_seq.hpp"
 #include "util/include/func_test_util.hpp"
-#include "util/include/util.hpp"
+
 
 namespace baranov_a_sign_alternations {
 
@@ -65,8 +58,8 @@ class BaranovASignAternationsFuncTests : public ppc::util::BaseRunFuncTests<InTy
   }
 
  private:
-  InType input_data_;
-  OutType expected_output_;
+  InType input_data_{};
+  OutType expected_output_{};
 };
 
 namespace {
