@@ -8,7 +8,6 @@
 
 #include "baranov_a_sign_alternations/common/include/common.hpp"
 
-
 namespace baranov_a_sign_alternations {
 
 BaranovASignAlternationsMPI::BaranovASignAlternationsMPI(const InType &in) {

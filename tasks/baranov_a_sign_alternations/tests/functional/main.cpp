@@ -10,7 +10,6 @@
 #include "baranov_a_sign_alternations/seq/include/ops_seq.hpp"
 #include "util/include/func_test_util.hpp"
 
-
 namespace baranov_a_sign_alternations {
 
 class BaranovASignAternationsFuncTests : public ppc::util::BaseRunFuncTests<InType, OutType, TestType> {
