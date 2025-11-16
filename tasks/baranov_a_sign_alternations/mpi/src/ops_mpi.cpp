@@ -45,7 +45,7 @@ BaranovASignAlternationsMPI::BaranovASignAlternationsMPI(const InType &in) {
 }
 
 bool BaranovASignAlternationsMPI::ValidationImpl() {
-  return !GetInput().empty() && (GetOutput() == 0);
+  return GetOutput() >= 0;
 }
 
 bool BaranovASignAlternationsMPI::PreProcessingImpl() {

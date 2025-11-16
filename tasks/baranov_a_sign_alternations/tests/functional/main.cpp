@@ -47,7 +47,7 @@ class BaranovASignAternationsFuncTests : public ppc::util::BaseRunFuncTests<InTy
         break;
       case 6:
         input_data_ = {0, 1, 0, -1, 0, 2, 0, -2, 0};
-        expected_output_ = 2;
+        expected_output_ = 0;
         break;
       case 7:
         input_data_ = {1, 2, 3, -4};

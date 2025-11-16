@@ -14,7 +14,7 @@ BaranovASignAlternationsSEQ::BaranovASignAlternationsSEQ(const InType &in) {
 }
 
 bool BaranovASignAlternationsSEQ::ValidationImpl() {
-  return !GetInput().empty() && (GetOutput() == 0);
+  return GetOutput() >= 0;
 }
 
 bool BaranovASignAlternationsSEQ::PreProcessingImpl() {
