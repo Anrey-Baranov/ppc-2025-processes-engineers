@@ -26,7 +26,6 @@ class BaranovASignAlternationsPerfTests : public ppc::util::BaseRunPerfTests<InT
       } else {
         input_data_[i] = 0;
       }
-
     }
   }
 
