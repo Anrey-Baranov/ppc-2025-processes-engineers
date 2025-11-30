@@ -86,10 +86,20 @@ bool BaranovASignAlternationsMPI::RunImpl() {
   int local_alternations = CountAlternationsInRange(input, start_pair, end_pair);
 
   int total_alternations = 0;
-  MPI_Reduce(&local_alternations, &total_alternations, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Bcast(&total_alternations, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-  GetOutput() = total_alternations;
+  MPI_Reduce(&local_alternations, &total_alternations, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+
+  if (world_rank == 0) {
+    GetOutput() = total_alternations;
+    for (int i = 1; i < world_size; i++) {
+      MPI_Send(&total_alternations, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+    }
+
+  } else {
+    MPI_Recv(&total_alternations, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    GetOutput() = total_alternations;
+  }
+
   MPI_Barrier(MPI_COMM_WORLD);
   return true;
 }
