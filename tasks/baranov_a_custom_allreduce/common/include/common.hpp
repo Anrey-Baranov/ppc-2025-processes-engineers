@@ -22,4 +22,4 @@ struct TestConfig {
   std::string datatype;
 };
 
-}  // namespace baranov_a_custom_allreduce_2
+}  // namespace baranov_a_custom_allreduce

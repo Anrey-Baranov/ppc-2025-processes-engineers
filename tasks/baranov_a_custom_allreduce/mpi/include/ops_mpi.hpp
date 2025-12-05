@@ -32,4 +32,4 @@ class BaranovACustomAllreduceMPI : public BaseTask {
   static std::vector<T> GetVectorFromVariant(const InTypeVariant &variant);
 };
 
-}  // namespace baranov_a_custom_allreduce_2
+}  // namespace baranov_a_custom_allreduce
