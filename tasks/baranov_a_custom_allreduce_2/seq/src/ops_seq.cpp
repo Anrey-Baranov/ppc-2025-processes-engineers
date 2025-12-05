@@ -1,11 +1,11 @@
-#include "baranov_a_custom_allreduce/seq/include/ops_seq.hpp"
+#include "baranov_a_custom_allreduce_2/seq/include/ops_seq.hpp"
 
 #include <iostream>
 #include <stdexcept>
 #include <variant>
 #include <vector>
 
-#include "baranov_a_custom_allreduce/common/include/common.hpp"
+#include "baranov_a_custom_allreduce_2/common/include/common.hpp"
 
 namespace baranov_a_custom_allreduce {
 

@@ -1,4 +1,4 @@
-#include "baranov_a_custom_allreduce/mpi/include/ops_mpi.hpp"
+#include "baranov_a_custom_allreduce_2/mpi/include/ops_mpi.hpp"
 
 #include <mpi.h>
 
@@ -9,7 +9,7 @@
 #include <stdexcept>
 #include <variant>
 
-#include "baranov_a_custom_allreduce/common/include/common.hpp"
+#include "baranov_a_custom_allreduce_2/common/include/common.hpp"
 
 namespace baranov_a_custom_allreduce {
 

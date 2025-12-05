@@ -1,6 +1,6 @@
 #pragma once
 
-#include "baranov_a_custom_allreduce/common/include/common.hpp"
+#include "baranov_a_custom_allreduce_2/common/include/common.hpp"
 #include "task/include/task.hpp"
 
 namespace baranov_a_custom_allreduce {

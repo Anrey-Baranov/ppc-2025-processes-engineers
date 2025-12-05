@@ -1,40 +1,74 @@
 #include <gtest/gtest.h>
 
-#include "example_processes/common/include/common.hpp"
-#include "example_processes/mpi/include/ops_mpi.hpp"
-#include "example_processes/seq/include/ops_seq.hpp"
+#include <random>
+#include <vector>
+
+#include "baranov_a_custom_allreduce_2/common/include/common.hpp"
+#include "baranov_a_custom_allreduce_2/mpi/include/ops_mpi.hpp"
+#include "baranov_a_custom_allreduce_2/seq/include/ops_seq.hpp"
 #include "util/include/perf_test_util.hpp"
 
-namespace nesterov_a_test_task_processes {
+namespace baranov_a_custom_allreduce {
 
-class ExampleRunPerfTestProcesses : public ppc::util::BaseRunPerfTests<InType, OutType> {
-  const int kCount_ = 100;
-  InType input_data_{};
-
+class BaranovACustomAllreducePerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
+ protected:
   void SetUp() override {
-    input_data_ = kCount_;
+    auto param = GetParam();
+    std::string task_name = std::get<1>(param);
+    is_mpi_test_ = (task_name.find("mpi") != std::string::npos);
+
+    int size = 10000000;
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<> dis(-1000.0, 1000.0);
+
+    std::vector<double> data(size);
+    for (int i = 0; i < size; i++) {
+      data[i] = dis(gen);
+    }
+
+    input_data_ = InTypeVariant{data};
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
-    return input_data_ == output_data;
+    try {
+      if (!is_mpi_test_) {
+        return output_data == input_data_;
+      } else {
+        auto output_vec = std::get<std::vector<double>>(output_data);
+        for (const auto &val : output_vec) {
+          if (std::isnan(val) || std::isinf(val)) {
+            return false;
+          }
+        }
+        return true;
+      }
+    } catch (const std::exception &) {
+      return false;
+    }
   }
 
   InType GetTestInputData() final {
     return input_data_;
   }
+
+ private:
+  InType input_data_;
+  bool is_mpi_test_ = false;
 };
 
-TEST_P(ExampleRunPerfTestProcesses, RunPerfModes) {
+TEST_P(BaranovACustomAllreducePerfTests, RunPerfModes) {
   ExecuteTest(GetParam());
 }
 
-const auto kAllPerfTasks =
-    ppc::util::MakeAllPerfTasks<InType, NesterovATestTaskMPI, NesterovATestTaskSEQ>(PPC_SETTINGS_example_processes);
+const auto kAllPerfTasks = ppc::util::MakeAllPerfTasks<InType, BaranovACustomAllreduceMPI, BaranovACustomAllreduceSEQ>(
+    PPC_SETTINGS_baranov_a_custom_allreduce_2);
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 
-const auto kPerfTestName = ExampleRunPerfTestProcesses::CustomPerfTestName;
+const auto kPerfTestName = BaranovACustomAllreducePerfTests::CustomPerfTestName;
 
-INSTANTIATE_TEST_SUITE_P(RunModeTests, ExampleRunPerfTestProcesses, kGtestValues, kPerfTestName);
+INSTANTIATE_TEST_SUITE_P(RunModeTests, BaranovACustomAllreducePerfTests, kGtestValues, kPerfTestName);
 
-}  // namespace nesterov_a_test_task_processes
+}  // namespace baranov_a_custom_allreduce

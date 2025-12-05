@@ -3,9 +3,9 @@
 #include <random>
 #include <vector>
 
-#include "baranov_a_custom_allreduce/common/include/common.hpp"
-#include "baranov_a_custom_allreduce/mpi/include/ops_mpi.hpp"
-#include "baranov_a_custom_allreduce/seq/include/ops_seq.hpp"
+#include "baranov_a_custom_allreduce_2/common/include/common.hpp"
+#include "baranov_a_custom_allreduce_2/mpi/include/ops_mpi.hpp"
+#include "baranov_a_custom_allreduce_2/seq/include/ops_seq.hpp"
 #include "util/include/perf_test_util.hpp"
 
 namespace baranov_a_custom_allreduce {
@@ -63,7 +63,7 @@ TEST_P(BaranovACustomAllreducePerfTests, RunPerfModes) {
 }
 
 const auto kAllPerfTasks = ppc::util::MakeAllPerfTasks<InType, BaranovACustomAllreduceMPI, BaranovACustomAllreduceSEQ>(
-    PPC_SETTINGS_baranov_a_custom_allreduce);
+    PPC_SETTINGS_baranov_a_custom_allreduce_2);
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 
