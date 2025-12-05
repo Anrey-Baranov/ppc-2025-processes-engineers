@@ -7,7 +7,7 @@
 
 #include "task/include/task.hpp"
 
-namespace baranov_a_custom_allreduce {
+namespace baranov_a_custom_allreduce_2 {
 
 using InTypeVariant = std::variant<std::vector<int>, std::vector<float>, std::vector<double>>;
 
@@ -22,4 +22,4 @@ struct TestConfig {
   std::string datatype;
 };
 
-}  // namespace baranov_a_custom_allreduce
+}  // namespace baranov_a_custom_allreduce_2

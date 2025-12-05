@@ -8,7 +8,7 @@
 #include "baranov_a_custom_allreduce_2/seq/include/ops_seq.hpp"
 #include "util/include/perf_test_util.hpp"
 
-namespace baranov_a_custom_allreduce {
+namespace baranov_a_custom_allreduce_2 {
 
 class BaranovACustomAllreducePerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
  protected:

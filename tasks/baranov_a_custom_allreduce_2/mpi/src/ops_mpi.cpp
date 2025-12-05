@@ -11,7 +11,7 @@
 
 #include "baranov_a_custom_allreduce_2/common/include/common.hpp"
 
-namespace baranov_a_custom_allreduce {
+namespace baranov_a_custom_allreduce_2 {
 
 void BaranovACustomAllreduceMPI::TreeBroadcast(void *buffer, int count, MPI_Datatype datatype, MPI_Comm comm,
                                                int root) {
@@ -237,4 +237,4 @@ bool BaranovACustomAllreduceMPI::PostProcessingImpl() {
   return true;
 }
 
-}  // namespace baranov_a_custom_allreduce
+}  // namespace baranov_a_custom_allreduce_2

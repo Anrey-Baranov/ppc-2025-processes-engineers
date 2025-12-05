@@ -3,7 +3,7 @@
 #include "baranov_a_custom_allreduce_2/common/include/common.hpp"
 #include "task/include/task.hpp"
 
-namespace baranov_a_custom_allreduce {
+namespace baranov_a_custom_allreduce_2 {
 
 class BaranovACustomAllreduceSEQ : public BaseTask {
  public:
@@ -18,4 +18,4 @@ class BaranovACustomAllreduceSEQ : public BaseTask {
   bool RunImpl() override;
   bool PostProcessingImpl() override;
 };
-}  // namespace baranov_a_custom_allreduce
+}  // namespace baranov_a_custom_allreduce_2

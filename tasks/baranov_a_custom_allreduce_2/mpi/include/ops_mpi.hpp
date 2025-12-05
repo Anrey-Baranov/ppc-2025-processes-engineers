@@ -5,7 +5,7 @@
 #include "baranov_a_custom_allreduce_2/common/include/common.hpp"
 #include "task/include/task.hpp"
 
-namespace baranov_a_custom_allreduce {
+namespace baranov_a_custom_allreduce_2 {
 
 class BaranovACustomAllreduceMPI : public BaseTask {
  public:
@@ -32,4 +32,4 @@ class BaranovACustomAllreduceMPI : public BaseTask {
   static std::vector<T> GetVectorFromVariant(const InTypeVariant &variant);
 };
 
-}  // namespace baranov_a_custom_allreduce
+}  // namespace baranov_a_custom_allreduce_2

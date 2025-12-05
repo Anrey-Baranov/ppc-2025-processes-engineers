@@ -7,7 +7,7 @@
 
 #include "baranov_a_custom_allreduce_2/common/include/common.hpp"
 
-namespace baranov_a_custom_allreduce {
+namespace baranov_a_custom_allreduce_2 {
 
 BaranovACustomAllreduceSEQ::BaranovACustomAllreduceSEQ(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
@@ -47,4 +47,4 @@ bool BaranovACustomAllreduceSEQ::RunImpl() {
 bool BaranovACustomAllreduceSEQ::PostProcessingImpl() {
   return true;
 }
-}  // namespace baranov_a_custom_allreduce
+}  // namespace baranov_a_custom_allreduce_2
