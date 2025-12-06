@@ -9,6 +9,7 @@
 #include <exception>
 #include <stdexcept>
 #include <variant>
+#include <vector>
 
 #include "baranov_a_custom_allreduce/common/include/common.hpp"
 
@@ -49,11 +50,11 @@ void BaranovACustomAllreduceMPI::TreeReduce(void *sendbuf, void *recvbuf, int co
   int type_size;
   MPI_Type_size(datatype, &type_size);
 
-  std::memcpy(recvbuf, sendbuf, count * type_size);
+  std::memcpy(recvbuf, sendbuf, static_cast<std::size_t>(count) * static_cast<std::size_t>(type_size));
   if (rank == root) {
     for (int i = 0; i < size; i++) {
       if (i != root) {
-        void *temp_buf = malloc(count * type_size);
+        void *temp_buf = std::malloc(static_cast<std::size_t>(count) * static_cast<std::size_t>(type_size));
         if (!temp_buf) {
           throw std::runtime_error("Memory allocation failed");
         }
@@ -65,7 +66,7 @@ void BaranovACustomAllreduceMPI::TreeReduce(void *sendbuf, void *recvbuf, int co
     }
   } else {
     MPI_Send(recvbuf, count, datatype, root, 0, comm);
-    std::memset(recvbuf, 0, count * type_size);
+    std::memset(recvbuf, 0, static_cast<std::size_t>(count) * static_cast<std::size_t>(type_size));
   }
 }
 
@@ -98,54 +99,62 @@ void BaranovACustomAllreduceMPI::PerformOperation(void *inbuf, void *inoutbuf, i
   }
 }
 
+static void ProcessRootReceive(void *temp_buf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm, int root,
+                               int size, int type_size) {
+  for (int i = 0; i < size; i++) {
+    if (i != root) {
+      void *recv_buf = std::malloc(static_cast<std::size_t>(count) * static_cast<std::size_t>(type_size));
+      if (recv_buf == nullptr) {
+        throw std::runtime_error("Memory allocation failed");
+      }
+
+      MPI_Recv(recv_buf, count, datatype, i, 0, comm, MPI_STATUS_IGNORE);
+      BaranovACustomAllreduceMPI::PerformOperation(recv_buf, temp_buf, count, datatype, op);
+      std::free(recv_buf);
+    }
+  }
+}
+
+static void ProcessRootSend(void *temp_buf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Comm comm, int root,
+                            int size, int type_size) {
+  for (int i = 0; i < size; i++) {
+    if (i != root) {
+      MPI_Send(temp_buf, count, datatype, i, 1, comm);
+    }
+  }
+  std::memcpy(recvbuf, temp_buf, static_cast<std::size_t>(count) * static_cast<std::size_t>(type_size));
+}
+
 void BaranovACustomAllreduceMPI::CustomAllreduce(void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype,
                                                  MPI_Op op, MPI_Comm comm, int root) {
   int rank = 0;
   int size = 0;
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
+
   if (count == 0) {
     return;
   }
 
   int type_size = 0;
   MPI_Type_size(datatype, &type_size);
-  void *temp_buf = malloc(count * type_size);
-  if (!temp_buf) {
+
+  void *temp_buf = std::malloc(static_cast<std::size_t>(count) * static_cast<std::size_t>(type_size));
+  if (temp_buf == nullptr) {
     throw std::runtime_error("Memory allocation failed");
   }
 
-  std::memcpy(temp_buf, sendbuf, count * type_size);
+  std::memcpy(temp_buf, sendbuf, static_cast<std::size_t>(count) * static_cast<std::size_t>(type_size));
 
   if (rank == root) {
-    for (int i = 0; i < size; i++) {
-      if (i != root) {
-        void *recv_buf = malloc(count * type_size);
-        if (!recv_buf) {
-          free(temp_buf);
-          throw std::runtime_error("Memory allocation failed");
-        }
-
-        MPI_Recv(recv_buf, count, datatype, i, 0, comm, MPI_STATUS_IGNORE);
-        PerformOperation(recv_buf, temp_buf, count, datatype, op);
-        free(recv_buf);
-      }
-    }
+    ProcessRootReceive(temp_buf, count, datatype, op, comm, root, size, type_size);
+    ProcessRootSend(temp_buf, recvbuf, count, datatype, comm, root, size, type_size);
   } else {
     MPI_Send(sendbuf, count, datatype, root, 0, comm);
-  }
-  if (rank == root) {
-    for (int i = 0; i < size; i++) {
-      if (i != root) {
-        MPI_Send(temp_buf, count, datatype, i, 1, comm);
-      }
-    }
-    std::memcpy(recvbuf, temp_buf, count * type_size);
-  } else {
     MPI_Recv(recvbuf, count, datatype, root, 1, comm, MPI_STATUS_IGNORE);
   }
 
-  free(temp_buf);
+  std::free(temp_buf);
 }
 
 template <typename T>

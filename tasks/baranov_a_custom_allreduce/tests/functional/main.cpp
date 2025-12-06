@@ -1,12 +1,15 @@
 #include <gtest/gtest.h>
+#include <mpi.h>
 
 #include <array>
 #include <cmath>
 #include <cstddef>
 #include <exception>
+#include <limits>
 #include <string>
 #include <tuple>
 #include <variant>
+#include <vector>
 
 #include "baranov_a_custom_allreduce/common/include/common.hpp"
 #include "baranov_a_custom_allreduce/mpi/include/ops_mpi.hpp"
@@ -22,6 +25,8 @@ class BaranovACustomAllreduceFuncTests : public ppc::util::BaseRunFuncTests<InTy
   }
 
  protected:
+  BaranovACustomAllreduceFuncTests() : data_type_(MPI_DATATYPE_NULL), is_mpi_test_(false) {}
+
   void SetUp() override {
     auto param = GetParam();
     TestType test_param = std::get<2>(param);
@@ -242,7 +247,6 @@ namespace {
 TEST_P(BaranovACustomAllreduceFuncTests, AllreduceTest) {
   auto param = GetParam();
   std::string task_name = std::get<1>(param);
-  std::cout << "Running test for task: " << task_name << std::endl;
   ExecuteTest(GetParam());
 }
 

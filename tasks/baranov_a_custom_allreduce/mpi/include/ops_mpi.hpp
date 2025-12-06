@@ -2,7 +2,6 @@
 
 #include <mpi.h>
 
-#include <cstddef>
 #include <vector>
 
 #include "baranov_a_custom_allreduce/common/include/common.hpp"
@@ -19,6 +18,7 @@ class BaranovACustomAllreduceMPI : public BaseTask {
 
   static void CustomAllreduce(void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm,
                               int root = 0);
+  static void PerformOperation(void *inbuf, void *inoutbuf, int count, MPI_Datatype datatype, MPI_Op op);
 
  private:
   bool ValidationImpl() override;
@@ -29,7 +29,6 @@ class BaranovACustomAllreduceMPI : public BaseTask {
   static void TreeReduce(void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm,
                          int root);
   static void TreeBroadcast(void *buffer, int count, MPI_Datatype datatype, MPI_Comm comm, int root);
-  static void PerformOperation(void *inbuf, void *inoutbuf, int count, MPI_Datatype datatype, MPI_Op op);
 
   template <typename T>
   static std::vector<T> GetVectorFromVariant(const InTypeVariant &variant);
