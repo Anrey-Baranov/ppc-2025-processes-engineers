@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <mpi.h>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -157,12 +158,95 @@ class BaranovACustomAllreduceFuncTests : public ppc::util::BaseRunFuncTests<InTy
     }
   }
 
+ private:
+  bool CheckMpiIntOutput(const std::vector<int> &output_vec, int world_size) {
+    auto expected_vec = expected_input_int_;
+    if (output_vec.size() != expected_vec.size()) {
+      return false;
+    }
+    for (std::size_t i = 0; i < output_vec.size(); ++i) {
+      int expected = expected_vec[i] * world_size;
+      if (output_vec[i] != expected) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool CheckMpiFloatOutput(const std::vector<float> &output_vec, int world_size) {
+    auto expected_vec = expected_input_float_;
+    if (output_vec.size() != expected_vec.size()) {
+      return false;
+    }
+    const float epsilon = 1e-5F;
+    for (std::size_t i = 0; i < output_vec.size(); ++i) {
+      float expected = expected_vec[i] * static_cast<float>(world_size);
+      bool output_is_nan = std::isnan(output_vec[i]);
+      bool expected_is_nan = std::isnan(expected);
+      if (output_is_nan != expected_is_nan) {
+        return false;
+      }
+      if (!output_is_nan && std::fabs(output_vec[i] - expected) > epsilon) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool CompareDoubleWithNanInf(double output, double expected, double epsilon) {
+    bool output_is_nan = std::isnan(output);
+    bool expected_is_nan = std::isnan(expected);
+    if (output_is_nan != expected_is_nan) {
+      return false;
+    }
+    bool output_is_inf = std::isinf(output);
+    bool expected_is_inf = std::isinf(expected);
+    if (output_is_inf != expected_is_inf) {
+      return false;
+    }
+    if (output_is_inf && expected_is_inf) {
+      return std::signbit(output) == std::signbit(expected);
+    }
+    if (!output_is_nan && !output_is_inf) {
+      return std::fabs(output - expected) <= epsilon;
+    }
+    return true;
+  }
+
+  bool CheckMpiDoubleOutput(const std::vector<double> &output_vec, int world_size) {
+    auto expected_vec = expected_input_double_;
+    if (output_vec.size() != expected_vec.size()) {
+      return false;
+    }
+    const double epsilon = 1e-10;
+    for (std::size_t i = 0; i < output_vec.size(); ++i) {
+      double expected = expected_vec[i] * static_cast<double>(world_size);
+      if (!CompareDoubleWithNanInf(output_vec[i], expected, epsilon)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool CheckSeqDoubleOutput(const std::vector<double> &output_vec) {
+    auto input_vec = std::get<std::vector<double>>(input_data_);
+    if (output_vec.size() != input_vec.size()) {
+      return false;
+    }
+    for (std::size_t i = 0; i < output_vec.size(); ++i) {
+      if (!CompareDoubleWithNanInf(output_vec[i], input_vec[i], 0.0)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+ public:
   bool CheckTestOutputData(OutType &output_data) final {
     try {
       if (is_mpi_test_) {
         int mpi_initialized = 0;
         MPI_Initialized(&mpi_initialized);
-
         if (mpi_initialized == 0) {
           return true;
         }
@@ -171,110 +255,21 @@ class BaranovACustomAllreduceFuncTests : public ppc::util::BaseRunFuncTests<InTy
         MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
         if (std::holds_alternative<std::vector<int>>(output_data)) {
-          auto output_vec = std::get<std::vector<int>>(output_data);
-          auto expected_vec = expected_input_int_;
-
-          if (output_vec.size() != expected_vec.size()) {
-            return false;
-          }
-
-          for (std::size_t i = 0; i < output_vec.size(); ++i) {
-            int expected = expected_vec[i] * world_size;
-            if (output_vec[i] != expected) {
-              return false;
-            }
-          }
-          return true;
+          return CheckMpiIntOutput(std::get<std::vector<int>>(output_data), world_size);
         }
-
         if (std::holds_alternative<std::vector<float>>(output_data)) {
-          auto output_vec = std::get<std::vector<float>>(output_data);
-          auto expected_vec = expected_input_float_;
-
-          if (output_vec.size() != expected_vec.size()) {
-            return false;
-          }
-
-          const float epsilon = 1e-5F;
-          for (std::size_t i = 0; i < output_vec.size(); ++i) {
-            float expected = expected_vec[i] * static_cast<float>(world_size);
-            // Специальная проверка для NaN
-            bool output_is_nan = std::isnan(output_vec[i]);
-            bool expected_is_nan = std::isnan(expected);
-            if (output_is_nan != expected_is_nan) {
-              return false;
-            }
-            if (!output_is_nan && std::fabs(output_vec[i] - expected) > epsilon) {
-              return false;
-            }
-          }
-          return true;
+          return CheckMpiFloatOutput(std::get<std::vector<float>>(output_data), world_size);
         }
-
         if (std::holds_alternative<std::vector<double>>(output_data)) {
-          auto output_vec = std::get<std::vector<double>>(output_data);
-          auto expected_vec = expected_input_double_;
-
-          if (output_vec.size() != expected_vec.size()) {
-            return false;
-          }
-
-          const double epsilon = 1e-10;
-          for (std::size_t i = 0; i < output_vec.size(); ++i) {
-            double expected = expected_vec[i] * static_cast<double>(world_size);
-            bool output_is_nan = std::isnan(output_vec[i]);
-            bool expected_is_nan = std::isnan(expected);
-            if (output_is_nan != expected_is_nan) {
-              return false;
-            }
-            bool output_is_inf = std::isinf(output_vec[i]);
-            bool expected_is_inf = std::isinf(expected);
-            if (output_is_inf != expected_is_inf) {
-              return false;
-            }
-            if (output_is_inf && expected_is_inf) {
-              if (std::signbit(output_vec[i]) != std::signbit(expected)) {
-                return false;
-              }
-            }
-            if (!output_is_nan && !output_is_inf && std::fabs(output_vec[i] - expected) > epsilon) {
-              return false;
-            }
-          }
-          return true;
+          return CheckMpiDoubleOutput(std::get<std::vector<double>>(output_data), world_size);
         }
         return false;
       }
+
       if (std::holds_alternative<std::vector<double>>(output_data)) {
-        auto output_vec = std::get<std::vector<double>>(output_data);
-        auto input_vec = std::get<std::vector<double>>(input_data_);
-
-        if (output_vec.size() != input_vec.size()) {
-          return false;
-        }
-
-        for (std::size_t i = 0; i < output_vec.size(); ++i) {
-          bool output_is_nan = std::isnan(output_vec[i]);
-          bool input_is_nan = std::isnan(input_vec[i]);
-          if (output_is_nan != input_is_nan) {
-            return false;
-          }
-          bool output_is_inf = std::isinf(output_vec[i]);
-          bool input_is_inf = std::isinf(input_vec[i]);
-          if (output_is_inf != input_is_inf) {
-            return false;
-          }
-          if (output_is_inf && input_is_inf) {
-            if (std::signbit(output_vec[i]) != std::signbit(input_vec[i])) {
-              return false;
-            }
-          }
-          if (!output_is_nan && !output_is_inf && output_vec[i] != input_vec[i]) {
-            return false;
-          }
-        }
-        return true;
+        return CheckSeqDoubleOutput(std::get<std::vector<double>>(output_data));
       }
+
       return output_data == input_data_;
 
     } catch (const std::exception &) {
@@ -299,7 +294,6 @@ namespace {
 
 TEST_P(BaranovACustomAllreduceFuncTests, AllreduceTest) {
   auto param = GetParam();
-  std::string task_name = std::get<1>(param);
   ExecuteTest(GetParam());
 }
 

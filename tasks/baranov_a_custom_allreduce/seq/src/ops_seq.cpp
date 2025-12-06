@@ -2,7 +2,6 @@
 
 #include <cmath>
 #include <exception>
-#include <stdexcept>
 #include <variant>
 
 #include "baranov_a_custom_allreduce/common/include/common.hpp"

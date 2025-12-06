@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cmath>
 #include <exception>
 #include <random>
@@ -39,14 +40,11 @@ class BaranovACustomAllreducePerfTests : public ppc::util::BaseRunPerfTests<InTy
       if (!is_mpi_test_) {
         return output_data == input_data_;
       }
-
       auto output_vec = std::get<std::vector<double>>(output_data);
-      for (const auto &val : output_vec) {
-        if (std::isnan(val) || std::isinf(val)) {
-          return false;
-        }
-      }
-      return true;
+      bool has_invalid = std::any_of(output_vec.begin(), output_vec.end(),
+                                     [](const auto &val) { return std::isnan(val) || std::isinf(val); });
+
+      return !has_invalid;
     } catch (const std::exception &) {
       return false;
     }
