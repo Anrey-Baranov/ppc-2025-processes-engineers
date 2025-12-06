@@ -17,14 +17,6 @@ BaranovACustomAllreduceSEQ::BaranovACustomAllreduceSEQ(const InType &in) {
 
 bool BaranovACustomAllreduceSEQ::ValidationImpl() {
   try {
-    auto output = GetOutput();
-    std::visit([](const auto &vec) {
-      for (const auto &val : vec) {
-        if (std::isnan(val) || std::isinf(val)) {
-          throw std::runtime_error("Invalid value in output");
-        }
-      }
-    }, output);
     return true;
   } catch (...) {
     return false;

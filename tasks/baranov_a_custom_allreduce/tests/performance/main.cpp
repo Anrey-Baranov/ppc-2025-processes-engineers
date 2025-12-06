@@ -38,15 +38,15 @@ class BaranovACustomAllreducePerfTests : public ppc::util::BaseRunPerfTests<InTy
     try {
       if (!is_mpi_test_) {
         return output_data == input_data_;
-      } else {
-        auto output_vec = std::get<std::vector<double>>(output_data);
-        for (const auto &val : output_vec) {
-          if (std::isnan(val) || std::isinf(val)) {
-            return false;
-          }
-        }
-        return true;
       }
+
+      auto output_vec = std::get<std::vector<double>>(output_data);
+      for (const auto &val : output_vec) {
+        if (std::isnan(val) || std::isinf(val)) {
+          return false;
+        }
+      }
+      return true;
     } catch (const std::exception &) {
       return false;
     }

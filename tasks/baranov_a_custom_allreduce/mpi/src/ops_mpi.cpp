@@ -47,7 +47,7 @@ void BaranovACustomAllreduceMPI::TreeReduce(void *sendbuf, void *recvbuf, int co
     return;
   }
 
-  int type_size;
+  int type_size = 0;
   MPI_Type_size(datatype, &type_size);
 
   std::memcpy(recvbuf, sendbuf, static_cast<std::size_t>(count) * static_cast<std::size_t>(type_size));
@@ -55,13 +55,13 @@ void BaranovACustomAllreduceMPI::TreeReduce(void *sendbuf, void *recvbuf, int co
     for (int i = 0; i < size; i++) {
       if (i != root) {
         void *temp_buf = std::malloc(static_cast<std::size_t>(count) * static_cast<std::size_t>(type_size));
-        if (!temp_buf) {
+        if (temp_buf == nullptr) {
           throw std::runtime_error("Memory allocation failed");
         }
 
         MPI_Recv(temp_buf, count, datatype, i, 0, comm, MPI_STATUS_IGNORE);
         PerformOperation(temp_buf, recvbuf, count, datatype, op);
-        free(temp_buf);
+        std::free(temp_buf);
       }
     }
   } else {
@@ -98,9 +98,9 @@ void BaranovACustomAllreduceMPI::PerformOperation(void *inbuf, void *inoutbuf, i
     throw std::runtime_error("Unsupported datatype");
   }
 }
-
-static void ProcessRootReceive(void *temp_buf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm, int root,
-                               int size, int type_size) {
+namespace {
+void ProcessRootReceive(void *temp_buf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm, int root, int size,
+                        int type_size) {
   for (int i = 0; i < size; i++) {
     if (i != root) {
       void *recv_buf = std::malloc(static_cast<std::size_t>(count) * static_cast<std::size_t>(type_size));
@@ -115,8 +115,8 @@ static void ProcessRootReceive(void *temp_buf, int count, MPI_Datatype datatype,
   }
 }
 
-static void ProcessRootSend(void *temp_buf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Comm comm, int root,
-                            int size, int type_size) {
+void ProcessRootSend(void *temp_buf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Comm comm, int root, int size,
+                     int type_size) {
   for (int i = 0; i < size; i++) {
     if (i != root) {
       MPI_Send(temp_buf, count, datatype, i, 1, comm);
@@ -124,6 +124,8 @@ static void ProcessRootSend(void *temp_buf, void *recvbuf, int count, MPI_Dataty
   }
   std::memcpy(recvbuf, temp_buf, static_cast<std::size_t>(count) * static_cast<std::size_t>(type_size));
 }
+
+}  // namespace
 
 void BaranovACustomAllreduceMPI::CustomAllreduce(void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype,
                                                  MPI_Op op, MPI_Comm comm, int root) {
@@ -176,7 +178,7 @@ BaranovACustomAllreduceMPI::BaranovACustomAllreduceMPI(const InType &in) {
     GetOutput() = InTypeVariant{std::vector<int>(vec.size(), 0)};
   } else if (std::holds_alternative<std::vector<float>>(in)) {
     auto vec = std::get<std::vector<float>>(in);
-    GetOutput() = InTypeVariant{std::vector<float>(vec.size(), 0.0f)};
+    GetOutput() = InTypeVariant{std::vector<float>(vec.size(), 0.0F)};
   } else {
     auto vec = std::get<std::vector<double>>(in);
     GetOutput() = InTypeVariant{std::vector<double>(vec.size(), 0.0)};
@@ -188,8 +190,10 @@ bool BaranovACustomAllreduceMPI::ValidationImpl() {
     auto output = GetOutput();
     std::visit([](const auto &vec) {
       for (const auto &val : vec) {
-        if (std::isnan(val) || std::isinf(val)) {
-          throw std::runtime_error("Invalid value in output");
+        if constexpr (std::is_floating_point_v<std::decay_t<decltype(val)>>) {
+          if (std::isnan(val) || std::isinf(val)) {
+            throw std::runtime_error("Invalid value in output");
+          }
         }
       }
     }, output);

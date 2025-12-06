@@ -25,7 +25,7 @@ class BaranovACustomAllreduceFuncTests : public ppc::util::BaseRunFuncTests<InTy
   }
 
  protected:
-  BaranovACustomAllreduceFuncTests() : data_type_(MPI_DATATYPE_NULL), is_mpi_test_(false) {}
+  BaranovACustomAllreduceFuncTests() : data_type_(MPI_DATATYPE_NULL) {}
 
   void SetUp() override {
     auto param = GetParam();
@@ -90,7 +90,7 @@ class BaranovACustomAllreduceFuncTests : public ppc::util::BaseRunFuncTests<InTy
         data_type_ = MPI_INT;
       } break;
       case 10: {
-        std::vector<float> input = {1.1f, 2.2f, 3.3f};
+        std::vector<float> input = {1.1F, 2.2F, 3.3F};
         input_data_ = InTypeVariant{input};
         expected_input_float_ = input;
         data_type_ = MPI_FLOAT;
@@ -163,7 +163,7 @@ class BaranovACustomAllreduceFuncTests : public ppc::util::BaseRunFuncTests<InTy
         int mpi_initialized = 0;
         MPI_Initialized(&mpi_initialized);
 
-        if (!mpi_initialized) {
+        if (mpi_initialized == 0) {
           return true;
         }
 
@@ -178,15 +178,16 @@ class BaranovACustomAllreduceFuncTests : public ppc::util::BaseRunFuncTests<InTy
             return false;
           }
 
-          for (size_t i = 0; i < output_vec.size(); ++i) {
+          for (std::size_t i = 0; i < output_vec.size(); ++i) {
             int expected = expected_vec[i] * world_size;
             if (output_vec[i] != expected) {
               return false;
             }
           }
           return true;
+        }
 
-        } else if (std::holds_alternative<std::vector<float>>(output_data)) {
+        if (std::holds_alternative<std::vector<float>>(output_data)) {
           auto output_vec = std::get<std::vector<float>>(output_data);
           auto expected_vec = expected_input_float_;
 
@@ -194,16 +195,23 @@ class BaranovACustomAllreduceFuncTests : public ppc::util::BaseRunFuncTests<InTy
             return false;
           }
 
-          float epsilon = 1e-5f;
-          for (size_t i = 0; i < output_vec.size(); ++i) {
-            float expected = expected_vec[i] * world_size;
-            if (std::abs(output_vec[i] - expected) > epsilon) {
+          const float epsilon = 1e-5F;
+          for (std::size_t i = 0; i < output_vec.size(); ++i) {
+            float expected = expected_vec[i] * static_cast<float>(world_size);
+            // Специальная проверка для NaN
+            bool output_is_nan = std::isnan(output_vec[i]);
+            bool expected_is_nan = std::isnan(expected);
+            if (output_is_nan != expected_is_nan) {
+              return false;
+            }
+            if (!output_is_nan && std::fabs(output_vec[i] - expected) > epsilon) {
               return false;
             }
           }
           return true;
+        }
 
-        } else if (std::holds_alternative<std::vector<double>>(output_data)) {
+        if (std::holds_alternative<std::vector<double>>(output_data)) {
           auto output_vec = std::get<std::vector<double>>(output_data);
           auto expected_vec = expected_input_double_;
 
@@ -211,19 +219,64 @@ class BaranovACustomAllreduceFuncTests : public ppc::util::BaseRunFuncTests<InTy
             return false;
           }
 
-          double epsilon = 1e-10;
-          for (size_t i = 0; i < output_vec.size(); ++i) {
-            double expected = expected_vec[i] * world_size;
-            if (std::abs(output_vec[i] - expected) > epsilon) {
+          const double epsilon = 1e-10;
+          for (std::size_t i = 0; i < output_vec.size(); ++i) {
+            double expected = expected_vec[i] * static_cast<double>(world_size);
+            bool output_is_nan = std::isnan(output_vec[i]);
+            bool expected_is_nan = std::isnan(expected);
+            if (output_is_nan != expected_is_nan) {
+              return false;
+            }
+            bool output_is_inf = std::isinf(output_vec[i]);
+            bool expected_is_inf = std::isinf(expected);
+            if (output_is_inf != expected_is_inf) {
+              return false;
+            }
+            if (output_is_inf && expected_is_inf) {
+              if (std::signbit(output_vec[i]) != std::signbit(expected)) {
+                return false;
+              }
+            }
+            if (!output_is_nan && !output_is_inf && std::fabs(output_vec[i] - expected) > epsilon) {
               return false;
             }
           }
           return true;
         }
         return false;
-      } else {
-        return output_data == input_data_;
       }
+      if (std::holds_alternative<std::vector<double>>(output_data)) {
+        auto output_vec = std::get<std::vector<double>>(output_data);
+        auto input_vec = std::get<std::vector<double>>(input_data_);
+
+        if (output_vec.size() != input_vec.size()) {
+          return false;
+        }
+
+        for (std::size_t i = 0; i < output_vec.size(); ++i) {
+          bool output_is_nan = std::isnan(output_vec[i]);
+          bool input_is_nan = std::isnan(input_vec[i]);
+          if (output_is_nan != input_is_nan) {
+            return false;
+          }
+          bool output_is_inf = std::isinf(output_vec[i]);
+          bool input_is_inf = std::isinf(input_vec[i]);
+          if (output_is_inf != input_is_inf) {
+            return false;
+          }
+          if (output_is_inf && input_is_inf) {
+            if (std::signbit(output_vec[i]) != std::signbit(input_vec[i])) {
+              return false;
+            }
+          }
+          if (!output_is_nan && !output_is_inf && output_vec[i] != input_vec[i]) {
+            return false;
+          }
+        }
+        return true;
+      }
+      return output_data == input_data_;
+
     } catch (const std::exception &) {
       return false;
     }
@@ -250,12 +303,14 @@ TEST_P(BaranovACustomAllreduceFuncTests, AllreduceTest) {
   ExecuteTest(GetParam());
 }
 
-const std::array<TestType, 10> kTestParam = {
+const std::array<TestType, 14> kTestParam = {
     std::make_tuple(1, "positive_doubles"),   std::make_tuple(2, "mixed_doubles"),
     std::make_tuple(3, "negative_doubles"),   std::make_tuple(4, "large_doubles"),
     std::make_tuple(5, "fractional_doubles"), std::make_tuple(6, "empty_vector"),
     std::make_tuple(7, "single_element"),     std::make_tuple(8, "zeros"),
     std::make_tuple(9, "integers"),           std::make_tuple(10, "floats"),
+    std::make_tuple(11, "float_with_suffix"), std::make_tuple(12, "nan_test"),
+    std::make_tuple(13, "inf_test"),          std::make_tuple(14, "large_count_test"),
 };
 
 const auto kTestTasksList = std::tuple_cat(
