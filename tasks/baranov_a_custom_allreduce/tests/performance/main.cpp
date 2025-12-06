@@ -1,6 +1,10 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
+#include <cmath>
+#include <exception>
 #include <random>
+#include <string>
 #include <vector>
 
 #include "baranov_a_custom_allreduce/common/include/common.hpp"

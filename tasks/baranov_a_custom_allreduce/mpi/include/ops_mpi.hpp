@@ -2,6 +2,9 @@
 
 #include <mpi.h>
 
+#include <cstddef>
+#include <vector>
+
 #include "baranov_a_custom_allreduce/common/include/common.hpp"
 #include "task/include/task.hpp"
 

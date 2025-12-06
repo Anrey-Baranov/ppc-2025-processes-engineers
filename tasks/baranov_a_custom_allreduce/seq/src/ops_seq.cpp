@@ -1,9 +1,9 @@
 #include "baranov_a_custom_allreduce/seq/include/ops_seq.hpp"
 
-#include <iostream>
+#include <cmath>
+#include <exception>
 #include <stdexcept>
 #include <variant>
-#include <vector>
 
 #include "baranov_a_custom_allreduce/common/include/common.hpp"
 

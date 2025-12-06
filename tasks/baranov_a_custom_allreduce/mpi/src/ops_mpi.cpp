@@ -2,10 +2,11 @@
 
 #include <mpi.h>
 
-#include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <cstdlib>
 #include <cstring>
-#include <iostream>
+#include <exception>
 #include <stdexcept>
 #include <variant>
 
@@ -15,7 +16,8 @@ namespace baranov_a_custom_allreduce {
 
 void BaranovACustomAllreduceMPI::TreeBroadcast(void *buffer, int count, MPI_Datatype datatype, MPI_Comm comm,
                                                int root) {
-  int rank, size;
+  int rank = 0;
+  int size = 0;
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
 
@@ -35,7 +37,8 @@ void BaranovACustomAllreduceMPI::TreeBroadcast(void *buffer, int count, MPI_Data
 
 void BaranovACustomAllreduceMPI::TreeReduce(void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op,
                                             MPI_Comm comm, int root) {
-  int rank, size;
+  int rank = 0;
+  int size = 0;
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
 
@@ -73,20 +76,20 @@ void BaranovACustomAllreduceMPI::PerformOperation(void *inbuf, void *inoutbuf, i
   }
 
   if (datatype == MPI_INT) {
-    int *in = static_cast<int *>(inbuf);
-    int *inout = static_cast<int *>(inoutbuf);
+    auto *in = static_cast<int *>(inbuf);
+    auto *inout = static_cast<int *>(inoutbuf);
     for (int i = 0; i < count; i++) {
       inout[i] += in[i];
     }
   } else if (datatype == MPI_FLOAT) {
-    float *in = static_cast<float *>(inbuf);
-    float *inout = static_cast<float *>(inoutbuf);
+    auto *in = static_cast<float *>(inbuf);
+    auto *inout = static_cast<float *>(inoutbuf);
     for (int i = 0; i < count; i++) {
       inout[i] += in[i];
     }
   } else if (datatype == MPI_DOUBLE) {
-    double *in = static_cast<double *>(inbuf);
-    double *inout = static_cast<double *>(inoutbuf);
+    auto *in = static_cast<double *>(inbuf);
+    auto *inout = static_cast<double *>(inoutbuf);
     for (int i = 0; i < count; i++) {
       inout[i] += in[i];
     }
@@ -97,14 +100,15 @@ void BaranovACustomAllreduceMPI::PerformOperation(void *inbuf, void *inoutbuf, i
 
 void BaranovACustomAllreduceMPI::CustomAllreduce(void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype,
                                                  MPI_Op op, MPI_Comm comm, int root) {
-  int rank, size;
+  int rank = 0;
+  int size = 0;
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
   if (count == 0) {
     return;
   }
 
-  int type_size;
+  int type_size = 0;
   MPI_Type_size(datatype, &type_size);
   void *temp_buf = malloc(count * type_size);
   if (!temp_buf) {

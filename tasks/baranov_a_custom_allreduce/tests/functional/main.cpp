@@ -2,7 +2,8 @@
 
 #include <array>
 #include <cmath>
-#include <iostream>
+#include <cstddef>
+#include <exception>
 #include <string>
 #include <tuple>
 #include <variant>
@@ -88,6 +89,59 @@ class BaranovACustomAllreduceFuncTests : public ppc::util::BaseRunFuncTests<InTy
         input_data_ = InTypeVariant{input};
         expected_input_float_ = input;
         data_type_ = MPI_FLOAT;
+      } break;
+      case 12: {
+        std::vector<double> input = {1.0, std::numeric_limits<double>::quiet_NaN(), 3.0,
+                                     std::numeric_limits<double>::signaling_NaN()};
+        input_data_ = InTypeVariant{input};
+        expected_input_double_ = input;
+        data_type_ = MPI_DOUBLE;
+      } break;
+
+      case 13: {
+        std::vector<double> input = {1.0, std::numeric_limits<double>::infinity(),
+                                     -std::numeric_limits<double>::infinity(), 4.0};
+        input_data_ = InTypeVariant{input};
+        expected_input_double_ = input;
+        data_type_ = MPI_DOUBLE;
+      } break;
+
+      case 14: {
+        const int size = 1000;
+        std::vector<double> input(size);
+        std::vector<int> input_int(size);
+        std::vector<float> input_float(size);
+        if (is_mpi_test_) {
+          if (task_name.find("int") != std::string::npos) {
+            for (int i = 0; i < size; i++) {
+              input_int[i] = i * 2;
+            }
+            input_data_ = InTypeVariant{input_int};
+            expected_input_int_ = input_int;
+            data_type_ = MPI_INT;
+          } else if (task_name.find("float") != std::string::npos) {
+            for (int i = 0; i < size; i++) {
+              input_float[i] = static_cast<float>(i) * 1.5F;
+            }
+            input_data_ = InTypeVariant{input_float};
+            expected_input_float_ = input_float;
+            data_type_ = MPI_FLOAT;
+          } else {
+            for (int i = 0; i < size; i++) {
+              input[i] = static_cast<double>(i) * 1.7;
+            }
+            input_data_ = InTypeVariant{input};
+            expected_input_double_ = input;
+            data_type_ = MPI_DOUBLE;
+          }
+        } else {
+          for (int i = 0; i < size; i++) {
+            input[i] = static_cast<double>(i) * 1.7;
+          }
+          input_data_ = InTypeVariant{input};
+          expected_input_double_ = input;
+          data_type_ = MPI_DOUBLE;
+        }
       } break;
       default: {
         std::vector<double> input = {1.0, 2.0, 3.0};
@@ -186,6 +240,9 @@ class BaranovACustomAllreduceFuncTests : public ppc::util::BaseRunFuncTests<InTy
 namespace {
 
 TEST_P(BaranovACustomAllreduceFuncTests, AllreduceTest) {
+  auto param = GetParam();
+  std::string task_name = std::get<1>(param);
+  std::cout << "Running test for task: " << task_name << std::endl;
   ExecuteTest(GetParam());
 }
 
