@@ -41,8 +41,8 @@ class BaranovACustomAllreducePerfTests : public ppc::util::BaseRunPerfTests<InTy
         return output_data == input_data_;
       }
       auto output_vec = std::get<std::vector<double>>(output_data);
-      bool has_invalid = std::any_of(output_vec.begin(), output_vec.end(),
-                                     [](const auto &val) { return std::isnan(val) || std::isinf(val); });
+      bool has_invalid =
+          std::ranges::any_of(output_vec, [](const auto &val) { return std::isnan(val) || std::isinf(val); });
 
       return !has_invalid;
     } catch (const std::exception &) {

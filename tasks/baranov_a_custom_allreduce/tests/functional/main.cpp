@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 #include <mpi.h>
 
-#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -193,7 +192,7 @@ class BaranovACustomAllreduceFuncTests : public ppc::util::BaseRunFuncTests<InTy
     return true;
   }
 
-  bool CompareDoubleWithNanInf(double output, double expected, double epsilon) {
+  static bool CompareDoubleWithNanInf(double output, double expected, double epsilon) {
     bool output_is_nan = std::isnan(output);
     bool expected_is_nan = std::isnan(expected);
     if (output_is_nan != expected_is_nan) {
@@ -293,7 +292,6 @@ class BaranovACustomAllreduceFuncTests : public ppc::util::BaseRunFuncTests<InTy
 namespace {
 
 TEST_P(BaranovACustomAllreduceFuncTests, AllreduceTest) {
-  auto param = GetParam();
   ExecuteTest(GetParam());
 }
 
