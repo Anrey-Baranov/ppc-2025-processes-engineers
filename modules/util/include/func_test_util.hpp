@@ -61,8 +61,6 @@ class BaseRunFuncTests : public ::testing::TestWithParam<FuncTestParam<InType, O
 
     ValidateTestName(test_name);
 
-    const auto test_env_scope = ppc::util::test::MakePerTestEnvForCurrentGTest(test_name);
-
     if (IsTestDisabled(test_name)) {
       GTEST_SKIP();
     }
