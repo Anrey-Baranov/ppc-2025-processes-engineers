@@ -33,10 +33,10 @@ bool BaranovADijkstraCrsSEQ::ValidateGraph(const GraphCRS &graph) {
   if (graph.vertices <= 0) {
     return false;
   }
-  if (graph.source < 0 || graph.source >= graph.vertices) {
+  if (graph.source < 0 || static_cast<size_t>(graph.source) >= static_cast<size_t>(graph.vertices)) {
     return false;
   }
-  if (graph.row_ptr.empty() || graph.row_ptr.size() != graph.vertices + 1) {
+  if (graph.row_ptr.empty() || graph.row_ptr.size() != static_cast<size_t>(graph.vertices) + 1) {
     return false;
   }
   for (int col : graph.col_idx) {
