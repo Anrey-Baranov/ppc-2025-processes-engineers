@@ -36,6 +36,14 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
     std::string task_name = std::get<1>(param);
     is_mpi_test_ = (task_name.find("mpi") != std::string::npos);
 
+    if (is_mpi_test_) {
+      int mpi_initialized = 0;
+      MPI_Initialized(&mpi_initialized);
+      if (!mpi_initialized) {
+        MPI_Init(nullptr, nullptr);
+      }
+    }
+
     switch (test_case) {
       case 1: {
         input_data_ = CreateSimpleGraph(5, 1, "int");
@@ -424,23 +432,16 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
   bool CheckTestOutputData(OutType &output_data) final {
     try {
       if (is_mpi_test_) {
-        int mpi_initialized = 0;
-        MPI_Initialized(&mpi_initialized);
-        if (!mpi_initialized) {
-          return true;
-        }
         auto mpi_output = std::get<std::vector<double>>(output_data);
         if (mpi_output.empty()) {
           return false;
         }
         const auto &graph = std::get<GraphCRS>(input_data_);
         if (graph.source >= 0 && static_cast<size_t>(graph.source) < mpi_output.size()) {
-          if (mpi_output[graph.source] != 0.0) {
-            return false;
-          }
+          return mpi_output[graph.source] == 0.0;
         }
+        return !mpi_output.empty();
 
-        return true;
       } else {
         auto output = std::get<std::vector<double>>(output_data);
         return !output.empty() && output.at(0) == 0.0;
