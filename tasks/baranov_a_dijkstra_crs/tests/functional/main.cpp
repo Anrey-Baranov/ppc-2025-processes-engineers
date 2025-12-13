@@ -443,7 +443,10 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
         return true;
       } else {
         auto output = std::get<std::vector<double>>(output_data);
-        return !output.empty() && output.front() == 0.0;
+        if (output.empty()) {
+          return false;
+        }
+        return output[0] == 0.0;
       }
 
     } catch (const std::exception &) {
