@@ -1,16 +1,11 @@
 #include <gtest/gtest.h>
-#include <mpi.h>
 
-#include <algorithm>
 #include <array>
 #include <cmath>
-#include <cstddef>
-#include <exception>
+#include <iostream>
 #include <limits>
-#include <random>
 #include <string>
 #include <tuple>
-#include <variant>
 #include <vector>
 
 #include "baranov_a_dijkstra_crs/common/include/common.hpp"
@@ -20,465 +15,235 @@
 
 namespace baranov_a_dijkstra_crs {
 
-class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, OutType, TestType> {
+class BaranovADijkstraCRSFuncTests : public ppc::util::BaseRunFuncTests<InType, OutType, TestType> {
  public:
   static std::string PrintTestParam(const TestType &test_param) {
     return std::get<1>(test_param);
   }
 
  protected:
-  BaranovADijkstraCrsFuncTests() {}
-  ~BaranovADijkstraCrsFuncTests() {}
-
   void SetUp() override {
     auto param = GetParam();
-    TestType test_param = std::get<2>(param);
-    int test_case = std::get<0>(test_param);
-    std::string task_name = std::get<1>(param);
-    is_mpi_test_ = (task_name.find("mpi") != std::string::npos);
+    int test_case = std::get<0>(std::get<2>(param));
 
     switch (test_case) {
       case 1: {
-        input_data_ = CreateSimpleGraph(5, 1, "int");
-      } break;
+        GraphData graph;
+        graph.num_vertices = 4;
+        graph.source_vertex = 0;
 
+        graph.offsets = {0, 2, 4, 6, 6};
+        graph.columns = {1, 2, 2, 3, 1, 3};
+        graph.values = {10.0, 5.0, 2.0, 1.0, 3.0, 9.0};
+
+        input_data_ = graph;
+        expected_output_ = {0.0, 8.0, 5.0, 9.0};
+        break;
+      }
       case 2: {
-        input_data_ = CreateSimpleGraph(10, 2, "int");
-      } break;
+        GraphData graph;
+        graph.num_vertices = 4;
+        graph.source_vertex = 0;
 
+        graph.offsets = {0, 0, 0, 0, 0};
+        graph.columns = {};
+        graph.values = {};
+
+        input_data_ = graph;
+        expected_output_ = {0.0, std::numeric_limits<double>::infinity(), std::numeric_limits<double>::infinity(),
+                            std::numeric_limits<double>::infinity()};
+        break;
+      }
       case 3: {
-        input_data_ = CreateSimpleGraph(8, 1.5, "float");
-      } break;
+        GraphData graph;
+        graph.num_vertices = 5;
+        graph.source_vertex = 0;
 
+        graph.offsets = {0, 1, 2, 3, 4, 4};
+        graph.columns = {1, 2, 3, 4};
+        graph.values = {1.0, 2.0, 3.0, 4.0};
+
+        input_data_ = graph;
+        expected_output_ = {0.0, 1.0, 3.0, 6.0, 10.0};
+        break;
+      }
       case 4: {
-        input_data_ = CreateSimpleGraph(6, 2.7, "double");
-      } break;
+        GraphData graph;
+        graph.num_vertices = 3;
+        graph.source_vertex = 0;
 
+        graph.offsets = {0, 2, 4, 6};
+        graph.columns = {1, 2, 0, 2, 0, 1};
+        graph.values = {1.0, 4.0, 1.0, 2.0, 4.0, 2.0};
+
+        input_data_ = graph;
+        expected_output_ = {0.0, 1.0, 3.0};
+        break;
+      }
       case 5: {
-        input_data_ = CreateSingleVertexGraph();
-      } break;
+        GraphData graph;
+        graph.num_vertices = 1;
+        graph.source_vertex = 0;
 
+        graph.offsets = {0, 0};
+        graph.columns = {};
+        graph.values = {};
+
+        input_data_ = graph;
+        expected_output_ = {0.0};
+        break;
+      }
       case 6: {
-        input_data_ = CreateCompleteGraph(4, 3, "int");
-      } break;
+        GraphData graph;
+        graph.num_vertices = 3;
+        graph.source_vertex = 0;
 
+        graph.offsets = {0, 2, 5, 6};
+        graph.columns = {1, 2, 0, 2, 0, 1};
+        graph.values = {5.0, 3.0, 5.0, 1.0, 3.0, 1.0};
+
+        input_data_ = graph;
+        expected_output_ = {0.0, 4.0, 3.0};
+        break;
+      }
       case 7: {
-        input_data_ = CreateTreeGraph(7, 1, "int");
-      } break;
+        GraphData graph;
+        graph.num_vertices = 4;
+        graph.source_vertex = 0;
 
+        graph.offsets = {0, 2, 3, 4, 4};
+        graph.columns = {1, 2, 3, 3};
+        graph.values = {5.0, 3.0, 1.0, 4.0};
+
+        input_data_ = graph;
+        expected_output_ = {0.0, 5.0, 3.0, 6.0};
+        break;
+      }
       case 8: {
-        input_data_ = CreateDisconnectedGraph(5, 1, "int");
-      } break;
+        GraphData graph;
+        graph.num_vertices = 5;
+        graph.source_vertex = 0;
 
+        graph.offsets = {0, 4, 4, 4, 4, 4};
+        graph.columns = {1, 2, 3, 4};
+        graph.values = {1.0, 2.0, 3.0, 4.0};
+
+        input_data_ = graph;
+        expected_output_ = {0.0, 1.0, 2.0, 3.0, 4.0};
+        break;
+      }
       case 9: {
-        input_data_ = CreateRandomGraph(15, 0.4, 5, "int");
-      } break;
+        GraphData graph;
+        graph.num_vertices = 4;
+        graph.source_vertex = 0;
 
+        graph.offsets = {0, 1, 2, 3, 4};
+        graph.columns = {1, 2, 3, 0};
+        graph.values = {1.0, 1.0, 1.0, 1.0};
+
+        input_data_ = graph;
+        expected_output_ = {0.0, 1.0, 2.0, 3.0};
+        break;
+      }
       case 10: {
-        input_data_ = CreateVaryingWeightGraph(6, "int");
-      } break;
+        GraphData graph;
+        graph.num_vertices = 4;
+        graph.source_vertex = 0;
 
+        graph.offsets = {0, 2, 3, 4, 4};
+        graph.columns = {1, 2, 3, 3};
+        graph.values = {2.0, 3.0, 4.0, 1.0};
+
+        input_data_ = graph;
+        expected_output_ = {0.0, 2.0, 3.0, 4.0};
+        break;
+      }
       case 11: {
-        input_data_ = CreateCycleGraph(6, 2, "int");
-      } break;
+        GraphData graph;
+        graph.num_vertices = 3;
+        graph.source_vertex = 1;
 
+        graph.offsets = {0, 0, 2, 4};
+        graph.columns = {0, 2, 0, 2};
+        graph.values = {2.0, 3.0, 2.0, 3.0};
+
+        input_data_ = graph;
+        expected_output_ = {2.0, 0.0, 3.0};
+        break;
+      }
       case 12: {
-        input_data_ = CreateStarGraph(8, 3, "int");
-      } break;
+        GraphData graph;
+        graph.num_vertices = 5;
+        graph.source_vertex = 0;
 
+        graph.offsets = {0, 2, 3, 4, 5, 5};
+        graph.columns = {1, 2, 3, 4, 4};
+        graph.values = {2.0, 4.0, 1.0, 3.0, 2.0};
+        input_data_ = graph;
+        expected_output_ = {0.0, 2.0, 4.0, 3.0, 5.0};
+        break;
+      }
       case 13: {
-        input_data_ = CreateGridGraph(3, 3, 1, "int");
-      } break;
+        GraphData graph;
+        graph.num_vertices = 3;
+        graph.source_vertex = 0;
+        graph.offsets = {0, 2, 3, 3};
+        graph.columns = {1, 2, 2};
+        graph.values = {4.0, 2.0, 1.0};
 
+        input_data_ = graph;
+        expected_output_ = {0.0, 4.0, 2.0};
+        break;
+      }
       case 14: {
-        if (is_mpi_test_) {
-          input_data_ = CreateLargeGraph(50, 1, "int");
-        } else {
-          input_data_ = CreateLargeGraph(30, 1, "int");
-        }
-      } break;
+        GraphData graph;
+        graph.num_vertices = 3;
+        graph.source_vertex = 0;
 
-      default: {
-        input_data_ = CreateSimpleGraph(3, 1, "int");
-      } break;
-    }
-    if (!is_mpi_test_) {
-      BaranovADijkstraCrsSEQ seq_task(input_data_);
-      if (seq_task.Validation() && seq_task.PreProcessing()) {
-        seq_task.Run();
-        expected_output_ = seq_task.GetOutput();
+        graph.offsets = {0, 2, 4, 6};
+        graph.columns = {1, 2, 0, 2, 0, 1};
+        graph.values = {1.0, 3.0, 1.0, 2.0, 3.0, 2.0};
+
+        input_data_ = graph;
+        expected_output_ = {0.0, 1.0, 3.0};
+        break;
       }
+      default:
+        GraphData graph;
+        graph.num_vertices = 4;
+        graph.source_vertex = 0;
+        graph.offsets = {0, 2, 4, 6, 6};
+        graph.columns = {1, 2, 2, 3, 1, 3};
+        graph.values = {10.0, 5.0, 2.0, 1.0, 3.0, 9.0};
+
+        input_data_ = graph;
+        expected_output_ = {0.0, 8.0, 5.0, 9.0};
     }
   }
-  void TearDown() override {
-    int mpi_initialized = 0;
-    MPI_Initialized(&mpi_initialized);
-    int mpi_finalized = 0;
-    MPI_Finalized(&mpi_finalized);
-  }
 
- private:
-  GraphCRS CreateSimpleGraph(int vertices, double base_weight, const std::string &type) {
-    GraphCRS graph;
-    graph.vertices = vertices;
-    graph.source = 0;
-
-    graph.row_ptr.push_back(0);
-    for (int i = 0; i < vertices; ++i) {
-      if (i < vertices - 1) {
-        graph.col_idx.push_back(i + 1);
-      }
-      graph.row_ptr.push_back(graph.col_idx.size());
-    }
-
-    if (type == "int") {
-      graph.weights = static_cast<int>(base_weight);
-    } else if (type == "float") {
-      graph.weights = static_cast<float>(base_weight);
-    } else {
-      graph.weights = base_weight;
-    }
-
-    return graph;
-  }
-
-  GraphCRS CreateLargeGraph(int vertices, double weight, const std::string &type) {
-    GraphCRS graph;
-    graph.vertices = vertices;
-    graph.source = 0;
-
-    graph.row_ptr.push_back(0);
-    for (int i = 0; i < vertices; ++i) {
-      for (int offset = 1; offset <= 3 && i + offset < vertices; ++offset) {
-        graph.col_idx.push_back(i + offset);
-      }
-      graph.row_ptr.push_back(graph.col_idx.size());
-    }
-
-    if (type == "int") {
-      graph.weights = static_cast<int>(weight);
-    } else if (type == "float") {
-      graph.weights = static_cast<float>(weight);
-    } else {
-      graph.weights = weight;
-    }
-
-    return graph;
-  }
-
-  GraphCRS CreateSingleVertexGraph() {
-    GraphCRS graph;
-    graph.vertices = 1;
-    graph.source = 0;
-    graph.row_ptr = {0, 0};
-    graph.weights = 0;
-    return graph;
-  }
-
-  GraphCRS CreateCompleteGraph(int vertices, double weight, const std::string &type) {
-    GraphCRS graph;
-    graph.vertices = vertices;
-    graph.source = 0;
-
-    graph.row_ptr.push_back(0);
-    for (int i = 0; i < vertices; ++i) {
-      for (int j = 0; j < vertices; ++j) {
-        if (i != j) {
-          graph.col_idx.push_back(j);
-        }
-      }
-      graph.row_ptr.push_back(graph.col_idx.size());
-    }
-
-    if (type == "int") {
-      graph.weights = static_cast<int>(weight);
-    } else if (type == "float") {
-      graph.weights = static_cast<float>(weight);
-    } else {
-      graph.weights = weight;
-    }
-
-    return graph;
-  }
-
-  GraphCRS CreateTreeGraph(int vertices, double weight, const std::string &type) {
-    GraphCRS graph;
-    graph.vertices = vertices;
-    graph.source = 0;
-
-    graph.row_ptr.push_back(0);
-    for (int i = 0; i < vertices; ++i) {
-      int left = 2 * i + 1;
-      int right = 2 * i + 2;
-
-      if (left < vertices) {
-        graph.col_idx.push_back(left);
-      }
-      if (right < vertices) {
-        graph.col_idx.push_back(right);
-      }
-      graph.row_ptr.push_back(graph.col_idx.size());
-    }
-
-    if (type == "int") {
-      graph.weights = static_cast<int>(weight);
-    } else if (type == "float") {
-      graph.weights = static_cast<float>(weight);
-    } else {
-      graph.weights = weight;
-    }
-
-    return graph;
-  }
-
-  GraphCRS CreateDisconnectedGraph(int vertices, double weight, const std::string &type) {
-    GraphCRS graph;
-    graph.vertices = vertices;
-    graph.source = 0;
-
-    graph.row_ptr.push_back(0);
-    for (int i = 0; i < vertices; ++i) {
-      if (i == 0 && vertices > 1) {
-        graph.col_idx.push_back(1);
-      }
-      graph.row_ptr.push_back(graph.col_idx.size());
-    }
-
-    if (type == "int") {
-      graph.weights = static_cast<int>(weight);
-    } else if (type == "float") {
-      graph.weights = static_cast<float>(weight);
-    } else {
-      graph.weights = weight;
-    }
-
-    return graph;
-  }
-
-  GraphCRS CreateRandomGraph(int vertices, double density, double max_weight, const std::string &type) {
-    GraphCRS graph;
-    graph.vertices = vertices;
-    graph.source = 0;
-
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<> prob_dist(0.0, 1.0);
-
-    graph.row_ptr.push_back(0);
-    for (int i = 0; i < vertices; ++i) {
-      for (int j = 0; j < vertices; ++j) {
-        if (i != j && prob_dist(gen) < density) {
-          graph.col_idx.push_back(j);
-        }
-      }
-      graph.row_ptr.push_back(graph.col_idx.size());
-    }
-
-    if (type == "int") {
-      graph.weights = static_cast<int>(max_weight);
-    } else if (type == "float") {
-      graph.weights = static_cast<float>(max_weight);
-    } else {
-      graph.weights = max_weight;
-    }
-
-    return graph;
-  }
-
-  GraphCRS CreateVaryingWeightGraph(int vertices, const std::string &type) {
-    return CreateSimpleGraph(vertices, 1.0, type);
-  }
-
-  GraphCRS CreateCycleGraph(int vertices, double weight, const std::string &type) {
-    GraphCRS graph;
-    graph.vertices = vertices;
-    graph.source = 0;
-
-    graph.row_ptr.push_back(0);
-    for (int i = 0; i < vertices; ++i) {
-      int next = (i + 1) % vertices;
-      graph.col_idx.push_back(next);
-      graph.row_ptr.push_back(graph.col_idx.size());
-    }
-
-    if (type == "int") {
-      graph.weights = static_cast<int>(weight);
-    } else if (type == "float") {
-      graph.weights = static_cast<float>(weight);
-    } else {
-      graph.weights = weight;
-    }
-
-    return graph;
-  }
-
-  GraphCRS CreateStarGraph(int vertices, double weight, const std::string &type) {
-    GraphCRS graph;
-    graph.vertices = vertices;
-    graph.source = 0;
-
-    graph.row_ptr.push_back(0);
-    for (int i = 0; i < vertices; ++i) {
-      if (i == 0) {
-        for (int j = 1; j < vertices; ++j) {
-          graph.col_idx.push_back(j);
-        }
-      } else {
-        graph.col_idx.push_back(0);
-      }
-      graph.row_ptr.push_back(graph.col_idx.size());
-    }
-
-    if (type == "int") {
-      graph.weights = static_cast<int>(weight);
-    } else if (type == "float") {
-      graph.weights = static_cast<float>(weight);
-    } else {
-      graph.weights = weight;
-    }
-
-    return graph;
-  }
-
-  GraphCRS CreateGridGraph(int rows, int cols, double weight, const std::string &type) {
-    int vertices = rows * cols;
-    GraphCRS graph;
-    graph.vertices = vertices;
-    graph.source = 0;
-
-    auto index = [cols](int r, int c) { return r * cols + c; };
-
-    graph.row_ptr.push_back(0);
-    for (int r = 0; r < rows; ++r) {
-      for (int c = 0; c < cols; ++c) {
-        if (r > 0) {
-          graph.col_idx.push_back(index(r - 1, c));
-        }
-        if (r < rows - 1) {
-          graph.col_idx.push_back(index(r + 1, c));
-        }
-        if (c > 0) {
-          graph.col_idx.push_back(index(r, c - 1));
-        }
-        if (c < cols - 1) {
-          graph.col_idx.push_back(index(r, c + 1));
-        }
-
-        graph.row_ptr.push_back(graph.col_idx.size());
-      }
-    }
-
-    if (type == "int") {
-      graph.weights = static_cast<int>(weight);
-    } else if (type == "float") {
-      graph.weights = static_cast<float>(weight);
-    } else {
-      graph.weights = weight;
-    }
-
-    return graph;
-  }
-
-  template <typename T>
-  static bool CompareVectors(const std::vector<T> &a, const std::vector<T> &b, double epsilon) {
-    if (a.size() != b.size()) {
+  bool CheckTestOutputData(OutType &output_data) final {
+    if (output_data.size() != expected_output_.size()) {
       return false;
     }
 
-    for (size_t i = 0; i < a.size(); ++i) {
-      bool a_inf = std::isinf(a[i]);
-      bool b_inf = std::isinf(b[i]);
+    for (size_t i = 0; i < output_data.size(); ++i) {
+      bool expected_inf = std::isinf(expected_output_[i]);
+      bool actual_inf = std::isinf(output_data[i]);
 
-      if (a_inf != b_inf) {
-        return false;
-      }
-      if (a_inf) {
-        if (std::signbit(a[i]) != std::signbit(b[i])) {
-          return false;
-        }
+      if (expected_inf && actual_inf) {
         continue;
       }
 
-      bool a_nan = std::isnan(a[i]);
-      bool b_nan = std::isnan(b[i]);
-
-      if (a_nan != b_nan) {
+      if (expected_inf != actual_inf) {
         return false;
       }
-      if (a_nan) {
-        continue;
-      }
 
-      if (std::fabs(a[i] - b[i]) > epsilon) {
+      if (std::abs(expected_output_[i] - output_data[i]) > 1e-6) {
         return false;
       }
     }
 
     return true;
-  }
-
- public:
-  bool CheckTestOutputData(OutType &output_data) final {
-    try {
-      if (is_mpi_test_) {
-        int mpi_initialized = 0;
-        MPI_Initialized(&mpi_initialized);
-
-        if (!mpi_initialized) {
-          if (std::holds_alternative<std::vector<int>>(output_data)) {
-            auto output = std::get<std::vector<int>>(output_data);
-            const auto &graph = std::get<GraphCRS>(input_data_);
-            return !output.empty() && output.size() == static_cast<size_t>(graph.vertices);
-          } else if (std::holds_alternative<std::vector<float>>(output_data)) {
-            auto output = std::get<std::vector<float>>(output_data);
-            const auto &graph = std::get<GraphCRS>(input_data_);
-            return !output.empty() && output.size() == static_cast<size_t>(graph.vertices);
-          } else if (std::holds_alternative<std::vector<double>>(output_data)) {
-            auto output = std::get<std::vector<double>>(output_data);
-            const auto &graph = std::get<GraphCRS>(input_data_);
-            return !output.empty() && output.size() == static_cast<size_t>(graph.vertices);
-          }
-          return false;
-        }
-
-        if (std::holds_alternative<std::vector<int>>(output_data)) {
-          auto output = std::get<std::vector<int>>(output_data);
-          const auto &graph = std::get<GraphCRS>(input_data_);
-          return !output.empty() && output.size() == static_cast<size_t>(graph.vertices) && output[graph.source] == 0;
-        } else if (std::holds_alternative<std::vector<float>>(output_data)) {
-          auto output = std::get<std::vector<float>>(output_data);
-          const auto &graph = std::get<GraphCRS>(input_data_);
-          return !output.empty() && output.size() == static_cast<size_t>(graph.vertices) &&
-                 std::fabs(output[graph.source]) < 1e-6;
-        } else if (std::holds_alternative<std::vector<double>>(output_data)) {
-          auto output = std::get<std::vector<double>>(output_data);
-          const auto &graph = std::get<GraphCRS>(input_data_);
-          return !output.empty() && output.size() == static_cast<size_t>(graph.vertices) &&
-                 std::fabs(output[graph.source]) < 1e-9;
-        }
-
-        return false;
-      } else {
-        if (std::holds_alternative<std::vector<int>>(output_data) &&
-            std::holds_alternative<std::vector<int>>(expected_output_)) {
-          return CompareVectors(std::get<std::vector<int>>(output_data), std::get<std::vector<int>>(expected_output_),
-                                0.0);
-        } else if (std::holds_alternative<std::vector<float>>(output_data) &&
-                   std::holds_alternative<std::vector<float>>(expected_output_)) {
-          return CompareVectors(std::get<std::vector<float>>(output_data),
-                                std::get<std::vector<float>>(expected_output_), 1e-5);
-        } else if (std::holds_alternative<std::vector<double>>(output_data) &&
-                   std::holds_alternative<std::vector<double>>(expected_output_)) {
-          return CompareVectors(std::get<std::vector<double>>(output_data),
-                                std::get<std::vector<double>>(expected_output_), 1e-9);
-        }
-
-        return false;
-      }
-
-    } catch (...) {
-      return false;
-    }
   }
 
   InType GetTestInputData() final {
@@ -488,34 +253,40 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
  private:
   InType input_data_;
   OutType expected_output_;
-  bool is_mpi_test_ = false;
 };
 
 namespace {
 
-TEST_P(BaranovADijkstraCrsFuncTests, DijkstraCRSTest) {
+TEST_P(BaranovADijkstraCRSFuncTests, DijkstraCRSTest) {
   ExecuteTest(GetParam());
 }
 
 const std::array<TestType, 14> kTestParam = {
-    std::make_tuple(1, "small_int_graph"),    std::make_tuple(2, "medium_int_graph"),
-    std::make_tuple(3, "float_weight_graph"), std::make_tuple(4, "double_weight_graph"),
-    std::make_tuple(5, "single_vertex"),      std::make_tuple(6, "complete_graph"),
-    std::make_tuple(7, "tree_graph"),         std::make_tuple(8, "disconnected_graph"),
-    std::make_tuple(9, "random_graph"),       std::make_tuple(10, "varying_weights"),
-    std::make_tuple(11, "cycle_graph"),       std::make_tuple(12, "star_graph"),
-    std::make_tuple(13, "grid_graph"),        std::make_tuple(14, "large_graph"),
+    std::make_tuple(1, "simple_graph_4_vertices"),
+    std::make_tuple(2, "no_paths_graph"),
+    std::make_tuple(3, "linear_graph"),
+    std::make_tuple(4, "complete_graph_3_vertices"),
+    std::make_tuple(5, "single_node_graph"),
+    std::make_tuple(6, "bidirectional_graph"),
+    std::make_tuple(7, "graph_with_multiple_paths"),
+    std::make_tuple(8, "star_graph"),
+    std::make_tuple(9, "cyclic_graph"),
+    std::make_tuple(10, "multiple_paths_to_target"),
+    std::make_tuple(11, "non_zero_source"),
+    std::make_tuple(12, "large_sparse_graph"),
+    std::make_tuple(13, "graph_with_self_loops"),
+    std::make_tuple(14, "fully_connected_graph"),
 };
 
 const auto kTestTasksList = std::tuple_cat(
-    ppc::util::AddFuncTask<BaranovADijkstraCrsMPI, InType>(kTestParam, PPC_SETTINGS_baranov_a_dijkstra_crs),
-    ppc::util::AddFuncTask<BaranovADijkstraCrsSEQ, InType>(kTestParam, PPC_SETTINGS_baranov_a_dijkstra_crs));
+    ppc::util::AddFuncTask<BaranovADijkstraCRSMPI, InType>(kTestParam, PPC_SETTINGS_baranov_a_dijkstra_crs),
+    ppc::util::AddFuncTask<BaranovADijkstraCRSSEQ, InType>(kTestParam, PPC_SETTINGS_baranov_a_dijkstra_crs));
 
 const auto kGtestValues = ppc::util::ExpandToValues(kTestTasksList);
 
-const auto kPerfTestName = BaranovADijkstraCrsFuncTests::PrintFuncTestName<BaranovADijkstraCrsFuncTests>;
+const auto kPerfTestName = BaranovADijkstraCRSFuncTests::PrintFuncTestName<BaranovADijkstraCRSFuncTests>;
 
-INSTANTIATE_TEST_SUITE_P(DijkstraCRSFuncTests, BaranovADijkstraCrsFuncTests, kGtestValues, kPerfTestName);
+INSTANTIATE_TEST_SUITE_P(DijkstraCRSTests, BaranovADijkstraCRSFuncTests, kGtestValues, kPerfTestName);
 
 }  // namespace
 

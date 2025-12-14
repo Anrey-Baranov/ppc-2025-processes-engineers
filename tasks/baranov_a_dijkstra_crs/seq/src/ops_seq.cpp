@@ -1,124 +1,83 @@
 #include "baranov_a_dijkstra_crs/seq/include/ops_seq.hpp"
 
-#include <algorithm>
-#include <climits>
 #include <limits>
-#include <stdexcept>
-#include <variant>
+#include <queue>
+#include <utility>
+#include <vector>
 
 #include "baranov_a_dijkstra_crs/common/include/common.hpp"
 
 namespace baranov_a_dijkstra_crs {
 
-BaranovADijkstraCrsSEQ::BaranovADijkstraCrsSEQ(const InType &in) {
+BaranovADijkstraCRSSEQ::BaranovADijkstraCRSSEQ(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
   GetInput() = in;
+  GetOutput() = std::vector<double>();
 }
 
-bool BaranovADijkstraCrsSEQ::ValidationImpl() {
-  try {
-    if (!std::holds_alternative<GraphCRS>(GetInput())) {
-      return false;
-    }
-
-    const auto &graph = std::get<GraphCRS>(GetInput());
-
-    if (graph.vertices <= 0) {
-      return false;
-    }
-    if (graph.source < 0 || graph.source >= graph.vertices) {
-      return false;
-    }
-    if (graph.row_ptr.size() != static_cast<size_t>(graph.vertices) + 1) {
-      return false;
-    }
-
-    return true;
-
-  } catch (...) {
+bool BaranovADijkstraCRSSEQ::ValidationImpl() {
+  const auto &input = GetInput();
+  if (input.num_vertices <= 0) {
     return false;
   }
-}
-
-bool BaranovADijkstraCrsSEQ::PreProcessingImpl() {
+  if (input.source_vertex < 0 || input.source_vertex >= input.num_vertices) {
+    return false;
+  }
+  if (input.offsets.size() != static_cast<size_t>(input.num_vertices + 1)) {
+    return false;
+  }
   return true;
 }
 
-template <typename T>
-std::vector<T> BaranovADijkstraCrsSEQ::DijkstraSequentialTemplate(int vertices, const std::vector<int> &row_ptr,
-                                                                  const std::vector<int> &col_idx,
-                                                                  const std::vector<T> &values, int source) {
-  const T INF = std::numeric_limits<T>::max();
-  std::vector<T> dist(vertices, INF);
-  std::vector<bool> visited(vertices, false);
+bool BaranovADijkstraCRSSEQ::PreProcessingImpl() {
+  return true;
+}
 
-  dist[source] = static_cast<T>(0);
+bool BaranovADijkstraCRSSEQ::RunImpl() {
+  const auto &graph = GetInput();
+  const int n = graph.num_vertices;
+  const int source = graph.source_vertex;
+  std::vector<double> dist(n, std::numeric_limits<double>::infinity());
+  dist[source] = 0.0;
+  std::priority_queue<std::pair<double, int>, std::vector<std::pair<double, int>>, std::greater<std::pair<double, int>>>
+      pq;
+  pq.push(std::make_pair(0.0, source));
+  std::vector<bool> visited(n, false);
 
-  for (int i = 0; i < vertices; ++i) {
-    int u = -1;
-    T min_dist = INF;
+  while (!pq.empty()) {
+    std::pair<double, int> current_pair = pq.top();
+    pq.pop();
 
-    for (int v = 0; v < vertices; ++v) {
-      if (!visited[v] && dist[v] < min_dist) {
-        min_dist = dist[v];
-        u = v;
-      }
+    double current_dist = current_pair.first;
+    int u = current_pair.second;
+
+    if (visited[u]) {
+      continue;
     }
-
-    if (u == -1 || dist[u] == INF) {
-      break;
-    }
-
     visited[u] = true;
-    int start = row_ptr[u];
-    int end = row_ptr[u + 1];
 
-    for (int j = start; j < end; ++j) {
-      int v = col_idx[j];
-      T weight = values[j];
+    int start = graph.offsets[u];
+    int end = graph.offsets[u + 1];
 
-      if (!visited[v] && dist[u] + weight < dist[v]) {
-        dist[v] = dist[u] + weight;
+    for (int idx = start; idx < end; ++idx) {
+      int v = graph.columns[idx];
+      double weight = graph.values[idx];
+
+      if (!visited[v]) {
+        double new_dist = current_dist + weight;
+        if (new_dist < dist[v]) {
+          dist[v] = new_dist;
+          pq.push(std::make_pair(new_dist, v));
+        }
       }
     }
   }
 
-  return dist;
+  GetOutput() = dist;
+  return true;
 }
 
-bool BaranovADijkstraCrsSEQ::RunImpl() {
-  try {
-    const auto &graph = std::get<GraphCRS>(GetInput());
-
-    if (std::holds_alternative<int>(graph.weights)) {
-      int weight = std::get<int>(graph.weights);
-      std::vector<int> values(graph.col_idx.size(), weight);
-      auto result = DijkstraSequentialTemplate<int>(graph.vertices, graph.row_ptr, graph.col_idx, values, graph.source);
-      GetOutput() = result;
-    } else if (std::holds_alternative<float>(graph.weights)) {
-      float weight = std::get<float>(graph.weights);
-      std::vector<float> values(graph.col_idx.size(), weight);
-      auto result =
-          DijkstraSequentialTemplate<float>(graph.vertices, graph.row_ptr, graph.col_idx, values, graph.source);
-      GetOutput() = result;
-    } else if (std::holds_alternative<double>(graph.weights)) {
-      double weight = std::get<double>(graph.weights);
-      std::vector<double> values(graph.col_idx.size(), weight);
-      auto result =
-          DijkstraSequentialTemplate<double>(graph.vertices, graph.row_ptr, graph.col_idx, values, graph.source);
-      GetOutput() = result;
-    } else {
-      return false;
-    }
-
-    return true;
-
-  } catch (...) {
-    return false;
-  }
-}
-
-bool BaranovADijkstraCrsSEQ::PostProcessingImpl() {
+bool BaranovADijkstraCRSSEQ::PostProcessingImpl() {
   return true;
 }
 

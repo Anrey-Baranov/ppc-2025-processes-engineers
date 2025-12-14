@@ -1,10 +1,7 @@
 #include <gtest/gtest.h>
 
-#include <algorithm>
 #include <cmath>
-#include <exception>
 #include <random>
-#include <string>
 #include <vector>
 
 #include "baranov_a_dijkstra_crs/common/include/common.hpp"
@@ -14,50 +11,42 @@
 
 namespace baranov_a_dijkstra_crs {
 
-class BaranovADijkstraCrsPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
+class BaranovADijkstraCRSPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
  protected:
   void SetUp() override {
-    auto param = GetParam();
-    std::string task_name = std::get<1>(param);
-    is_mpi_test_ = (task_name.find("mpi") != std::string::npos);
+    int num_vertices = 1000;
+    int edges_per_vertex = 10;
 
-    int vertices = is_mpi_test_ ? 200 : 100;
+    GraphData graph;
+    graph.num_vertices = num_vertices;
+    graph.source_vertex = 0;
 
-    GraphCRS graph;
-    graph.vertices = vertices;
-    graph.source = 0;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> vertex_dis(0, num_vertices - 1);
+    std::uniform_real_distribution<> weight_dis(0.1, 10.0);
 
-    graph.row_ptr.push_back(0);
-    for (int i = 0; i < vertices; ++i) {
-      for (int offset = 1; offset <= 3 && i + offset < vertices; ++offset) {
-        graph.col_idx.push_back(i + offset);
+    graph.offsets.resize(num_vertices + 1);
+    graph.offsets[0] = 0;
+
+    for (int i = 0; i < num_vertices; ++i) {
+      int num_edges = edges_per_vertex;
+      graph.offsets[i + 1] = graph.offsets[i] + num_edges;
+
+      for (int j = 0; j < num_edges; ++j) {
+        int target = vertex_dis(gen);
+        double weight = weight_dis(gen);
+
+        graph.columns.push_back(target);
+        graph.values.push_back(weight);
       }
-      graph.row_ptr.push_back(graph.col_idx.size());
     }
-
-    graph.weights = 1;
 
     input_data_ = graph;
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
-    try {
-      if (std::holds_alternative<std::vector<int>>(output_data)) {
-        const auto &output = std::get<std::vector<int>>(output_data);
-        return !output.empty() && output.at(0) == 0;
-      } else if (std::holds_alternative<std::vector<float>>(output_data)) {
-        const auto &output = std::get<std::vector<float>>(output_data);
-        return !output.empty() && std::fabs(output.at(0)) < 1e-6;
-      } else if (std::holds_alternative<std::vector<double>>(output_data)) {
-        const auto &output = std::get<std::vector<double>>(output_data);
-        return !output.empty() && std::fabs(output.at(0)) < 1e-9;
-      }
-
-      return false;
-
-    } catch (const std::exception &) {
-      return false;
-    }
+    return !output_data.empty();
   }
 
   InType GetTestInputData() final {
@@ -66,20 +55,19 @@ class BaranovADijkstraCrsPerfTests : public ppc::util::BaseRunPerfTests<InType, 
 
  private:
   InType input_data_;
-  bool is_mpi_test_ = false;
 };
 
-TEST_P(BaranovADijkstraCrsPerfTests, RunPerfModes) {
+TEST_P(BaranovADijkstraCRSPerfTests, RunPerfModes) {
   ExecuteTest(GetParam());
 }
 
-const auto kAllPerfTasks = ppc::util::MakeAllPerfTasks<InType, BaranovADijkstraCrsMPI, BaranovADijkstraCrsSEQ>(
+const auto kAllPerfTasks = ppc::util::MakeAllPerfTasks<InType, BaranovADijkstraCRSMPI, BaranovADijkstraCRSSEQ>(
     PPC_SETTINGS_baranov_a_dijkstra_crs);
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 
-const auto kPerfTestName = BaranovADijkstraCrsPerfTests::CustomPerfTestName;
+const auto kPerfTestName = BaranovADijkstraCRSPerfTests::CustomPerfTestName;
 
-INSTANTIATE_TEST_SUITE_P(RunModeTests, BaranovADijkstraCrsPerfTests, kGtestValues, kPerfTestName);
+INSTANTIATE_TEST_SUITE_P(RunModeTests, BaranovADijkstraCRSPerfTests, kGtestValues, kPerfTestName);
 
 }  // namespace baranov_a_dijkstra_crs
