@@ -27,15 +27,10 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
   }
 
  protected:
-  BaranovADijkstraCrsFuncTests() {
-    std::cout << "[DEBUG] BaranovADijkstraCrsFuncTests constructor" << std::endl;
-  }
-  ~BaranovADijkstraCrsFuncTests() {
-    std::cout << "[DEBUG] BaranovADijkstraCrsFuncTests destructor" << std::endl;
-  }
+  BaranovADijkstraCrsFuncTests() {}
+  ~BaranovADijkstraCrsFuncTests() {}
 
   void SetUp() override {
-    std::cout << "[DEBUG] BaranovADijkstraCrsFuncTests::SetUp called" << std::endl;
     auto param = GetParam();
     TestType test_param = std::get<2>(param);
     int test_case = std::get<0>(test_param);
@@ -114,22 +109,12 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
         expected_output_ = seq_task.GetOutput();
       }
     }
-    std::cout << "[DEBUG] Test setup complete, is_mpi_test_ = " << is_mpi_test_ << std::endl;
   }
   void TearDown() override {
-    std::cout << "[DEBUG] BaranovADijkstraCrsFuncTests::TearDown called" << std::endl;
-
-    // Проверим состояние MPI - но не вызывайте MPI_Finalize здесь!
     int mpi_initialized = 0;
     MPI_Initialized(&mpi_initialized);
     int mpi_finalized = 0;
     MPI_Finalized(&mpi_finalized);
-
-    std::cout << "[DEBUG] TearDown: MPI initialized = " << mpi_initialized << ", MPI finalized = " << mpi_finalized
-              << std::endl;
-
-    // НЕ вызывайте MPI_Finalize здесь!
-    // Google Test сам позаботится о финализации после всех тестов
   }
 
  private:
@@ -436,13 +421,10 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
   bool CheckTestOutputData(OutType &output_data) final {
     try {
       if (is_mpi_test_) {
-        // Для MPI тестов проверяем инициализацию MPI
         int mpi_initialized = 0;
         MPI_Initialized(&mpi_initialized);
 
-        // Если MPI не инициализирован, делаем простую проверку
         if (!mpi_initialized) {
-          // Безопасная проверка без использования MPI
           if (std::holds_alternative<std::vector<int>>(output_data)) {
             auto output = std::get<std::vector<int>>(output_data);
             const auto &graph = std::get<GraphCRS>(input_data_);
@@ -459,7 +441,6 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
           return false;
         }
 
-        // Если MPI инициализирован, делаем полную проверку
         if (std::holds_alternative<std::vector<int>>(output_data)) {
           auto output = std::get<std::vector<int>>(output_data);
           const auto &graph = std::get<GraphCRS>(input_data_);
@@ -478,7 +459,6 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
 
         return false;
       } else {
-        // Для SEQ тестов сравниваем с ожидаемым результатом
         if (std::holds_alternative<std::vector<int>>(output_data) &&
             std::holds_alternative<std::vector<int>>(expected_output_)) {
           return CompareVectors(std::get<std::vector<int>>(output_data), std::get<std::vector<int>>(expected_output_),

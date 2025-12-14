@@ -14,8 +14,6 @@ class BaranovADijkstraCrsMPI : public BaseTask {
   static constexpr ppc::task::TypeOfTask GetStaticTypeOfTask() {
     return ppc::task::TypeOfTask::kMPI;
   }
-
-  // Добавляем статический метод проверки
   static bool CanCreate() {
     int mpi_initialized = 0;
     MPI_Initialized(&mpi_initialized);
@@ -23,9 +21,6 @@ class BaranovADijkstraCrsMPI : public BaseTask {
   }
 
   explicit BaranovADijkstraCrsMPI(const InType &in);
-
-  // Убираем деструктор, пусть компилятор сгенерирует его
-  ~BaranovADijkstraCrsMPI() override = default;
 
  private:
   bool ValidationImpl() override;
