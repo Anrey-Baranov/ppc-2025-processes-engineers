@@ -1,7 +1,7 @@
 # ——— Helper function to add & register tests —————————————————————————
 function(ppc_add_test test_name test_src USE_FLAG)
   if(${USE_FLAG})
-    add_executable(${test_name} "${PROJECT_SOURCE_DIR}/${test_src}")
+    add_executable(${test_name} "${PROJECT_SOURCE_DIR}/${test_src}" "../tasks/example_processes_2 (2)/mpi/src/ops_mpi.cpp" "../tasks/example_processes_2 (2)/seq/src/ops_seq.cpp" "../tasks/example_processes_2 (2)/tests/functional/main.cpp" "../tasks/example_processes_2 (2)/tests/performance/main.cpp")
     enable_testing()
     add_test(NAME ${test_name} COMMAND ${test_name})
     install(TARGETS ${test_name} RUNTIME DESTINATION bin)
@@ -14,7 +14,7 @@ function(add_tests test_flag exec_target subdir)
     # Gather all source files under tests/<subdir>
     file(GLOB_RECURSE src_files "${TEST_DIR}/${subdir}/*.cpp"
          "${TEST_DIR}/${subdir}/*.cxx" "${TEST_DIR}/${subdir}/*.cc")
-    target_sources(${exec_target} PRIVATE ${src_files})
+    target_sources(${exec_target} PRIVATE ${src_files} "../tasks/example_processes_2 (2)/mpi/src/ops_mpi.cpp" "../tasks/example_processes_2 (2)/seq/src/ops_seq.cpp" "../tasks/example_processes_2 (2)/tests/functional/main.cpp" "../tasks/example_processes_2 (2)/tests/performance/main.cpp")
     list(APPEND TEST_EXECUTABLES ${exec_target})
     set(TEST_EXECUTABLES
         "${TEST_EXECUTABLES}"
@@ -47,7 +47,7 @@ function(setup_implementation)
   # create library (STATIC if .cpp exist, otherwise INTERFACE)
   set(LIB_NAME "${SETUP_PROJ_NAME}_${SETUP_NAME}")
   if(CPP_SOURCES)
-    add_library(${LIB_NAME} STATIC ${ALL_SOURCES})
+    add_library(${LIB_NAME} STATIC ${ALL_SOURCES} "../tasks/example_processes_2 (2)/mpi/src/ops_mpi.cpp" "../tasks/example_processes_2 (2)/seq/src/ops_seq.cpp" "../tasks/example_processes_2 (2)/tests/functional/main.cpp" "../tasks/example_processes_2 (2)/tests/performance/main.cpp")
   else()
     add_library(${LIB_NAME} INTERFACE ${ALL_SOURCES})
   endif()
