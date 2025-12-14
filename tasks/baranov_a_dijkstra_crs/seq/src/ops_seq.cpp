@@ -1,3 +1,5 @@
+#include "baranov_a_dijkstra_crs/seq/include/ops_seq.hpp"
+
 #include <gtest/gtest.h>
 #include <mpi.h>
 
@@ -15,7 +17,6 @@
 
 #include "baranov_a_dijkstra_crs/common/include/common.hpp"
 #include "baranov_a_dijkstra_crs/mpi/include/ops_mpi.hpp"
-#include "baranov_a_dijkstra_crs/seq/include/ops_seq.hpp"
 #include "util/include/func_test_util.hpp"
 
 namespace baranov_a_dijkstra_crs {
@@ -131,6 +132,7 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
     // НЕ вызывайте MPI_Finalize здесь!
     // Google Test сам позаботится о финализации после всех тестов
   }
+
  private:
   GraphCRS CreateSimpleGraph(int vertices, double base_weight, const std::string &type) {
     GraphCRS graph;
