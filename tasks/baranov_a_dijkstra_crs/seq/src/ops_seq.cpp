@@ -1,5 +1,8 @@
 #include "baranov_a_dijkstra_crs/seq/include/ops_seq.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <functional>
 #include <limits>
 #include <queue>
 #include <utility>
@@ -23,7 +26,7 @@ bool BaranovADijkstraCRSSEQ::ValidationImpl() {
   if (input.source_vertex < 0 || input.source_vertex >= input.num_vertices) {
     return false;
   }
-  if (input.offsets.size() != static_cast<size_t>(input.num_vertices + 1)) {
+  if (input.offsets.size() != static_cast<std::size_t>(input.num_vertices + 1)) {
     return false;
   }
   return true;
@@ -39,17 +42,15 @@ bool BaranovADijkstraCRSSEQ::RunImpl() {
   const int source = graph.source_vertex;
   std::vector<double> dist(n, std::numeric_limits<double>::infinity());
   dist[source] = 0.0;
-  std::priority_queue<std::pair<double, int>, std::vector<std::pair<double, int>>, std::greater<std::pair<double, int>>>
-      pq;
-  pq.push(std::make_pair(0.0, source));
+
+  std::priority_queue<std::pair<double, int>, std::vector<std::pair<double, int>>, std::greater<>> pq;
+  pq.emplace(0.0, source);
+
   std::vector<bool> visited(n, false);
 
   while (!pq.empty()) {
-    std::pair<double, int> current_pair = pq.top();
+    auto [current_dist, u] = pq.top();
     pq.pop();
-
-    double current_dist = current_pair.first;
-    int u = current_pair.second;
 
     if (visited[u]) {
       continue;
@@ -67,7 +68,7 @@ bool BaranovADijkstraCRSSEQ::RunImpl() {
         double new_dist = current_dist + weight;
         if (new_dist < dist[v]) {
           dist[v] = new_dist;
-          pq.push(std::make_pair(new_dist, v));
+          pq.emplace(new_dist, v);
         }
       }
     }

@@ -2,7 +2,7 @@
 
 #include <array>
 #include <cmath>
-#include <iostream>
+#include <cstddef>
 #include <limits>
 #include <string>
 #include <tuple>

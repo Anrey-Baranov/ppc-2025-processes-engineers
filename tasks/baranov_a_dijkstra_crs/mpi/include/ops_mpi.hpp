@@ -1,5 +1,10 @@
 #pragma once
 
+#include <cstddef>
+#include <string>
+#include <tuple>
+#include <vector>
+
 #include "baranov_a_dijkstra_crs/common/include/common.hpp"
 #include "task/include/task.hpp"
 
