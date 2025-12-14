@@ -74,7 +74,6 @@ void BaranovADijkstraCrsMPI::TreeBroadcast(std::vector<T> &data, int count, int 
   if (count == 0) {
     return;
   }
-
   if (rank == root) {
     for (int i = 0; i < size; i++) {
       if (i != root) {
@@ -96,27 +95,18 @@ void BaranovADijkstraCrsMPI::TreeAllReduceMin(std::vector<T> &local_data, std::v
   if (count == 0) {
     return;
   }
-
-  int type_size;
-  MPI_Type_size(datatype, &type_size);
-
   if (rank == 0) {
-    std::memcpy(global_data.data(), local_data.data(), static_cast<size_t>(count) * type_size);
+    std::memcpy(global_data.data(), local_data.data(), count * sizeof(T));
 
     for (int i = 1; i < size; i++) {
-      std::vector<unsigned char> temp_buf(static_cast<size_t>(count) * type_size);
+      std::vector<T> temp_buf(count);
       MPI_Recv(temp_buf.data(), count, datatype, i, 0, comm, MPI_STATUS_IGNORE);
-
-      T *temp = reinterpret_cast<T *>(temp_buf.data());
-      T *global = global_data.data();
-
       for (int j = 0; j < count; j++) {
-        if (temp[j] < global[j]) {
-          global[j] = temp[j];
+        if (temp_buf[j] < global_data[j]) {
+          global_data[j] = temp_buf[j];
         }
       }
     }
-
     for (int i = 1; i < size; i++) {
       MPI_Send(global_data.data(), count, datatype, i, 1, comm);
     }
@@ -137,14 +127,6 @@ std::vector<T> BaranovADijkstraCrsMPI::DijkstraParallelTemplate(int vertices, co
   const T INF = std::numeric_limits<T>::max();
   std::vector<T> dist(vertices, INF);
 
-  // Каждый процесс вычисляет свою порцию вершин
-  int local_vertices = vertices / size;
-  int remainder = vertices % size;
-
-  int start_idx = rank * local_vertices + std::min(rank, remainder);
-  int end_idx = start_idx + local_vertices + (rank < remainder ? 1 : 0);
-
-  // Распределение начальных расстояний
   if (rank == 0) {
     dist[source] = static_cast<T>(0);
   }
@@ -158,53 +140,62 @@ std::vector<T> BaranovADijkstraCrsMPI::DijkstraParallelTemplate(int vertices, co
     mpi_type = MPI_DOUBLE;
   }
 
-  // Broadcast начального массива расстояний
   TreeBroadcast(dist, vertices, 0, mpi_type, MPI_COMM_WORLD);
 
   std::vector<bool> visited(vertices, false);
 
   for (int i = 0; i < vertices; ++i) {
-    // Находим минимальную непосещенную вершину локально
     T local_min = INF;
     int local_u = -1;
 
-    for (int v = start_idx; v < end_idx; ++v) {
+    for (int v = 0; v < vertices; ++v) {
       if (!visited[v] && dist[v] < local_min) {
         local_min = dist[v];
         local_u = v;
       }
     }
-
-    // Находим глобальный минимум среди всех процессов
-    struct {
+    T global_min = INF;
+    int global_u = -1;
+    struct MinData {
       T dist;
       int vertex;
-    } local_data, global_data;
+    };
 
-    local_data.dist = local_min;
-    local_data.vertex = local_u;
-
+    MinData local_data{local_min, local_u};
+    MinData global_data{INF, -1};
     MPI_Datatype minloc_type;
+    MPI_Type_contiguous(2, MPI_INT, &minloc_type);
+
     if constexpr (std::is_same_v<T, int>) {
-      minloc_type = MPI_2INT;
-    } else if constexpr (std::is_same_v<T, float>) {
-      minloc_type = MPI_FLOAT_INT;
+      MPI_Op minloc_op;
+      MPI_Op_create([](void *invec, void *inoutvec, int *len, MPI_Datatype *datatype) {
+        MinData *in = static_cast<MinData *>(invec);
+        MinData *inout = static_cast<MinData *>(inoutvec);
+
+        for (int i = 0; i < *len; i++) {
+          if (in[i].dist < inout[i].dist) {
+            inout[i] = in[i];
+          }
+        }
+      }, 1, &minloc_op);
+
+      MPI_Allreduce(&local_data, &global_data, 1, minloc_type, minloc_op, MPI_COMM_WORLD);
+      MPI_Op_free(&minloc_op);
     } else {
-      minloc_type = MPI_DOUBLE_INT;
+      MPI_Allreduce(&local_min, &global_min, 1, mpi_type, MPI_MIN, MPI_COMM_WORLD);
+      if (local_min == global_min && local_u != -1) {
+        global_u = local_u;
+      }
+      MPI_Allreduce(MPI_IN_PLACE, &global_u, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
     }
 
-    MPI_Allreduce(&local_data, &global_data, 1, minloc_type, MPI_MINLOC, MPI_COMM_WORLD);
+    MPI_Type_free(&minloc_type);
 
-    int global_u = global_data.vertex;
-    T global_min_dist = global_data.dist;
-
-    if (global_u == -1 || global_min_dist == INF) {
+    if (global_u == -1 || global_min == INF) {
       break;
     }
 
     visited[global_u] = true;
-
-    // Обновляем расстояния для соседей выбранной вершины
     int start = row_ptr[global_u];
     int end = row_ptr[global_u + 1];
 
@@ -212,15 +203,16 @@ std::vector<T> BaranovADijkstraCrsMPI::DijkstraParallelTemplate(int vertices, co
       int v = col_idx[j];
       T weight = values[j];
 
-      if (!visited[v] && dist[global_u] + weight < dist[v]) {
-        dist[v] = dist[global_u] + weight;
+      if (!visited[v]) {
+        T new_dist = (dist[global_u] == INF) ? INF : dist[global_u] + weight;
+        if (new_dist < dist[v]) {
+          dist[v] = new_dist;
+        }
       }
     }
-
-    // Синхронизируем обновленные расстояния между процессами
     std::vector<T> global_dist(vertices);
     TreeAllReduceMin(dist, global_dist, vertices, mpi_type, MPI_COMM_WORLD);
-    dist = global_dist;
+    dist.swap(global_dist);
   }
 
   return dist;
@@ -229,27 +221,23 @@ std::vector<T> BaranovADijkstraCrsMPI::DijkstraParallelTemplate(int vertices, co
 bool BaranovADijkstraCrsMPI::RunImpl() {
   try {
     const auto &graph = std::get<GraphCRS>(GetInput());
-
-    // Преобразуем веса в правильный тип
+    std::vector<double> weights_double;
     if (std::holds_alternative<int>(graph.weights)) {
       int weight = std::get<int>(graph.weights);
-      std::vector<int> values(graph.col_idx.size(), weight);
-      auto result = DijkstraParallelTemplate<int>(graph.vertices, graph.row_ptr, graph.col_idx, values, graph.source);
-      GetOutput() = result;
+      weights_double.resize(graph.col_idx.size(), static_cast<double>(weight));
     } else if (std::holds_alternative<float>(graph.weights)) {
       float weight = std::get<float>(graph.weights);
-      std::vector<float> values(graph.col_idx.size(), weight);
-      auto result = DijkstraParallelTemplate<float>(graph.vertices, graph.row_ptr, graph.col_idx, values, graph.source);
-      GetOutput() = result;
+      weights_double.resize(graph.col_idx.size(), static_cast<double>(weight));
     } else if (std::holds_alternative<double>(graph.weights)) {
       double weight = std::get<double>(graph.weights);
-      std::vector<double> values(graph.col_idx.size(), weight);
-      auto result =
-          DijkstraParallelTemplate<double>(graph.vertices, graph.row_ptr, graph.col_idx, values, graph.source);
-      GetOutput() = result;
+      weights_double.resize(graph.col_idx.size(), weight);
     } else {
       return false;
     }
+    auto result =
+        DijkstraParallelTemplate<double>(graph.vertices, graph.row_ptr, graph.col_idx, weights_double, graph.source);
+
+    GetOutput() = result;
 
     return true;
 
@@ -273,17 +261,5 @@ bool BaranovADijkstraCrsMPI::RunImpl() {
 bool BaranovADijkstraCrsMPI::PostProcessingImpl() {
   return true;
 }
-
-// Явная инстанциация шаблонных функций
-template void BaranovADijkstraCrsMPI::TreeBroadcast<int>(std::vector<int> &, int, int, MPI_Datatype, MPI_Comm);
-template void BaranovADijkstraCrsMPI::TreeBroadcast<float>(std::vector<float> &, int, int, MPI_Datatype, MPI_Comm);
-template void BaranovADijkstraCrsMPI::TreeBroadcast<double>(std::vector<double> &, int, int, MPI_Datatype, MPI_Comm);
-
-template void BaranovADijkstraCrsMPI::TreeAllReduceMin<int>(std::vector<int> &, std::vector<int> &, int, MPI_Datatype,
-                                                            MPI_Comm);
-template void BaranovADijkstraCrsMPI::TreeAllReduceMin<float>(std::vector<float> &, std::vector<float> &, int,
-                                                              MPI_Datatype, MPI_Comm);
-template void BaranovADijkstraCrsMPI::TreeAllReduceMin<double>(std::vector<double> &, std::vector<double> &, int,
-                                                               MPI_Datatype, MPI_Comm);
 
 }  // namespace baranov_a_dijkstra_crs
