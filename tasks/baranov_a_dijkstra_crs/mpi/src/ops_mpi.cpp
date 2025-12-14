@@ -5,7 +5,6 @@
 #include <cmath>
 #include <cstddef>
 #include <limits>
-#include <utility>
 #include <vector>
 
 #include "baranov_a_dijkstra_crs/common/include/common.hpp"
@@ -124,6 +123,21 @@ bool ProcessLocalVertices(const std::vector<double> &local_dist, const std::vect
 
   return changed;
 }
+
+bool UpdateDistances(std::vector<double> &global_dist, std::vector<double> &local_dist, std::vector<double> &new_dist,
+                     int total_vertices) {
+  MPI_Allreduce(new_dist.data(), global_dist.data(), total_vertices, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+
+  if (!global_dist.empty() && !local_dist.empty() && global_dist.size() == local_dist.size()) {
+    local_dist.assign(global_dist.begin(), global_dist.end());
+  }
+
+  if (!global_dist.empty() && !new_dist.empty() && global_dist.size() == new_dist.size()) {
+    new_dist.assign(global_dist.begin(), global_dist.end());
+  }
+
+  return true;
+}
 }  // namespace
 
 BaranovADijkstraCRSMPI::BaranovADijkstraCRSMPI(const InType &in) {
@@ -230,13 +244,8 @@ bool BaranovADijkstraCRSMPI::RunImpl() {
     return true;
   }
 
-  std::vector<double> local_dist;
-  std::vector<double> new_dist;
-
-  if (!global_dist.empty()) {
-    local_dist = global_dist;
-    new_dist = global_dist;
-  }
+  std::vector<double> local_dist = global_dist;
+  std::vector<double> new_dist = global_dist;
 
   for (int iter = 0; iter < total_vertices; ++iter) {
     bool changed = ProcessLocalVertices(local_dist, local_offsets_, local_columns_, local_values_, local_start,
@@ -249,16 +258,9 @@ bool BaranovADijkstraCRSMPI::RunImpl() {
     if (global_changed == 0) {
       break;
     }
+
     if (!new_dist.empty() && !global_dist.empty()) {
-      MPI_Allreduce(new_dist.data(), global_dist.data(), total_vertices, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-
-      if (!global_dist.empty() && !local_dist.empty() && global_dist.size() == local_dist.size()) {
-        local_dist.assign(global_dist.begin(), global_dist.end());
-      }
-
-      if (!global_dist.empty() && !new_dist.empty() && global_dist.size() == new_dist.size()) {
-        new_dist.assign(global_dist.begin(), global_dist.end());
-      }
+      UpdateDistances(global_dist, local_dist, new_dist, total_vertices);
     }
   }
 
