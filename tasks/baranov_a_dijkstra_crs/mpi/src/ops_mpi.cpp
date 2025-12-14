@@ -2,12 +2,8 @@
 
 #include <mpi.h>
 
-#include <algorithm>
 #include <cmath>
-#include <cstddef>
 #include <limits>
-#include <queue>
-#include <utility>
 #include <vector>
 
 #include "baranov_a_dijkstra_crs/common/include/common.hpp"
@@ -83,25 +79,33 @@ bool ProcessLocalVertices(const std::vector<double> &local_dist, const std::vect
       continue;
     }
 
-    if (local_dist[global_v] < std::numeric_limits<double>::infinity()) {
-      if (i < static_cast<int>(local_offsets.size()) - 1) {
-        int start = local_offsets[i];
-        int end = local_offsets[i + 1];
+    if (local_dist[global_v] >= std::numeric_limits<double>::infinity()) {
+      continue;
+    }
 
-        for (int idx = start; idx < end; ++idx) {
-          if (static_cast<std::size_t>(idx) < local_columns.size()) {
-            int neighbor = local_columns[idx];
-            double weight = local_values[idx];
+    if (i >= static_cast<int>(local_offsets.size()) - 1) {
+      continue;
+    }
 
-            if (neighbor >= 0 && neighbor < total_vertices) {
-              double new_distance = local_dist[global_v] + weight;
-              if (new_distance < new_dist[neighbor]) {
-                new_dist[neighbor] = new_distance;
-                changed = true;
-              }
-            }
-          }
-        }
+    int start = local_offsets[i];
+    int end = local_offsets[i + 1];
+
+    for (int idx = start; idx < end; ++idx) {
+      if (static_cast<std::size_t>(idx) >= local_columns.size()) {
+        continue;
+      }
+
+      int neighbor = local_columns[idx];
+      double weight = local_values[idx];
+
+      if (neighbor < 0 || neighbor >= total_vertices) {
+        continue;
+      }
+
+      double new_distance = local_dist[global_v] + weight;
+      if (new_distance < new_dist[neighbor]) {
+        new_dist[neighbor] = new_distance;
+        changed = true;
       }
     }
   }
@@ -110,14 +114,7 @@ bool ProcessLocalVertices(const std::vector<double> &local_dist, const std::vect
 }
 }  // namespace
 
-BaranovADijkstraCRSMPI::BaranovADijkstraCRSMPI(const InType &in)
-    : local_offsets(),
-      local_columns(),
-      local_values(),
-      vertex_ownership(),
-      local_num_vertices(0),
-      world_size(0),
-      world_rank(0) {
+BaranovADijkstraCRSMPI::BaranovADijkstraCRSMPI(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
   GetInput() = in;
   GetOutput() = std::vector<double>();
@@ -131,7 +128,7 @@ bool BaranovADijkstraCRSMPI::ValidationImpl() {
   if (input.source_vertex < 0 || input.source_vertex >= input.num_vertices) {
     return false;
   }
-  if (input.offsets.size() != static_cast<std::size_t>(input.num_vertices + 1)) {
+  if (input.offsets.size() != static_cast<std::size_t>(input.num_vertices) + 1) {
     return false;
   }
   return true;

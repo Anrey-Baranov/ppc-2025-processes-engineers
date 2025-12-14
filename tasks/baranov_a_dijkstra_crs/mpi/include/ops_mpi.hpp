@@ -1,8 +1,5 @@
 #pragma once
 
-#include <cstddef>
-#include <string>
-#include <tuple>
 #include <vector>
 
 #include "baranov_a_dijkstra_crs/common/include/common.hpp"
@@ -30,9 +27,9 @@ class BaranovADijkstraCRSMPI : public BaseTask {
   std::vector<int> local_columns;
   std::vector<double> local_values;
   std::vector<int> vertex_ownership;
-  int local_num_vertices;
-  int world_size;
-  int world_rank;
+  int local_num_vertices = 0;
+  int world_size = 0;
+  int world_rank = 0;
 };
 
 }  // namespace baranov_a_dijkstra_crs

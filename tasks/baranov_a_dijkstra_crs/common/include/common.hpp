@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstddef>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -13,8 +12,11 @@ struct GraphData {
   std::vector<int> offsets;
   std::vector<int> columns;
   std::vector<double> values;
-  int num_vertices;
-  int source_vertex;
+  int num_vertices = 0;
+  int source_vertex = 0;
+
+  GraphData() : num_vertices(0), source_vertex(0) {}
+  GraphData(int n, int src) : num_vertices(n), source_vertex(src) {}
 };
 
 using InType = GraphData;
