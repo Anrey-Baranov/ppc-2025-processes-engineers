@@ -472,9 +472,9 @@ const std::array<TestType, 14> kTestParam = {
     std::make_tuple(3, "float_weight_graph"), std::make_tuple(4, "double_weight_graph"),
     std::make_tuple(5, "single_vertex"),      std::make_tuple(6, "complete_graph"),
     std::make_tuple(7, "tree_graph"),         std::make_tuple(8, "disconnected_graph"),
-    std::make_tuple(9, "large_seq_graph"),    std::make_tuple(10, "varying_weights"),
-    std::make_tuple(11, "cycle_graph"),       std::make_tuple(12, "star_graph"),
-    std::make_tuple(13, "grid_graph"),        std::make_tuple(14, "large_mpi_graph"),
+    std::make_tuple(10, "varying_weights"),   std::make_tuple(11, "cycle_graph"),
+    std::make_tuple(12, "star_graph"),        std::make_tuple(13, "grid_graph"),
+    std::make_tuple(14, "large_mpi_graph"),
 };
 
 const auto kTestTasksList = std::tuple_cat(

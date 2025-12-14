@@ -19,6 +19,16 @@ BaranovADijkstraCrsMPI::BaranovADijkstraCrsMPI(const InType &in) {
 }
 
 BaranovADijkstraCrsMPI::~BaranovADijkstraCrsMPI() noexcept {
+  std::cout << "[DEBUG] ~BaranovADijkstraCrsMPI() called" << std::endl;
+
+  int rank = 0;
+  int initialized = 0;
+  MPI_Initialized(&initialized);
+  if (initialized) {
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    std::cout << "[DEBUG] Rank " << rank << " destroying MPI task" << std::endl;
+  }
+
   try {
     ppc::util::DestructorFailureFlag::Unset();
   } catch (...) {
