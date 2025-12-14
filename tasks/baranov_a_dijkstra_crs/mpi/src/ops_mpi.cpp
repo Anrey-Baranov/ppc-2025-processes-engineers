@@ -138,6 +138,73 @@ bool UpdateDistances(std::vector<double> &global_dist, std::vector<double> &loca
 
   return true;
 }
+
+bool InitializeDistances(const GraphData &graph, int world_rank, int world_size, std::vector<double> &global_dist,
+                         std::vector<double> &local_dist, std::vector<double> &new_dist, int &source_owner) {
+  const int total_vertices = graph.num_vertices;
+  const int source = graph.source_vertex;
+
+  int local_start = 0;
+  int local_end = 0;
+  int local_num_vertices = 0;
+  CalculateVertexDistribution(world_rank, world_size, total_vertices, local_start, local_end, local_num_vertices);
+
+  if (local_end > total_vertices) {
+    local_end = total_vertices;
+    local_num_vertices = local_end - local_start;
+  }
+
+  bool i_own_source = (total_vertices > 0 && local_num_vertices > 0 && source >= local_start && source < local_end);
+  InitializeGlobalDist(global_dist, total_vertices, source, i_own_source);
+
+  int my_has_source = i_own_source ? world_rank : -1;
+  MPI_Allreduce(&my_has_source, &source_owner, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+
+  if (source_owner >= 0 && !global_dist.empty()) {
+    MPI_Bcast(global_dist.data(), total_vertices, MPI_DOUBLE, source_owner, MPI_COMM_WORLD);
+  }
+
+  if (global_dist.empty()) {
+    return false;
+  }
+
+  if (!global_dist.empty()) {
+    local_dist = global_dist;
+    new_dist = global_dist;
+  } else {
+    local_dist.clear();
+    new_dist.clear();
+  }
+
+  return true;
+}
+
+bool PerformDijkstraIterations(const std::vector<double> &local_dist, const std::vector<int> &local_offsets,
+                               const std::vector<int> &local_columns, const std::vector<double> &local_values,
+                               int local_start, int local_num_vertices, int total_vertices,
+                               std::vector<double> &global_dist, std::vector<double> &new_dist) {
+  std::vector<double> current_local_dist = local_dist;
+  std::vector<double> current_new_dist = new_dist;
+
+  for (int iter = 0; iter < total_vertices; ++iter) {
+    bool changed = ProcessLocalVertices(current_local_dist, local_offsets, local_columns, local_values, local_start,
+                                        local_num_vertices, total_vertices, current_new_dist);
+
+    int global_changed = 0;
+    int local_changed_int = changed ? 1 : 0;
+    MPI_Allreduce(&local_changed_int, &global_changed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+
+    if (global_changed == 0) {
+      break;
+    }
+
+    if (!current_new_dist.empty() && !global_dist.empty()) {
+      UpdateDistances(global_dist, current_local_dist, current_new_dist, total_vertices);
+    }
+  }
+
+  return true;
+}
 }  // namespace
 
 BaranovADijkstraCRSMPI::BaranovADijkstraCRSMPI(const InType &in) {
@@ -207,7 +274,6 @@ void BaranovADijkstraCRSMPI::DistributeGraphData() {
 bool BaranovADijkstraCRSMPI::RunImpl() {
   const auto &graph = GetInput();
   const int total_vertices = graph.num_vertices;
-  const int source = graph.source_vertex;
 
   if (total_vertices <= 0) {
     GetOutput() = std::vector<double>();
@@ -216,6 +282,17 @@ bool BaranovADijkstraCRSMPI::RunImpl() {
   }
 
   DistributeGraphData();
+
+  std::vector<double> global_dist;
+  std::vector<double> local_dist;
+  std::vector<double> new_dist;
+  int source_owner = -1;
+
+  if (!InitializeDistances(graph, world_rank_, world_size_, global_dist, local_dist, new_dist, source_owner)) {
+    GetOutput() = std::vector<double>();
+    MPI_Barrier(MPI_COMM_WORLD);
+    return true;
+  }
 
   int local_start = 0;
   int local_end = 0;
@@ -226,51 +303,8 @@ bool BaranovADijkstraCRSMPI::RunImpl() {
     local_num_vertices_ = local_end - local_start;
   }
 
-  std::vector<double> global_dist;
-  bool i_own_source = (total_vertices > 0 && local_num_vertices_ > 0 && source >= local_start && source < local_end);
-  InitializeGlobalDist(global_dist, total_vertices, source, i_own_source);
-
-  int source_owner = -1;
-  int my_has_source = i_own_source ? world_rank_ : -1;
-  MPI_Allreduce(&my_has_source, &source_owner, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-
-  if (source_owner >= 0 && !global_dist.empty()) {
-    MPI_Bcast(global_dist.data(), total_vertices, MPI_DOUBLE, source_owner, MPI_COMM_WORLD);
-  }
-
-  if (global_dist.empty()) {
-    GetOutput() = std::vector<double>();
-    MPI_Barrier(MPI_COMM_WORLD);
-    return true;
-  }
-
-  std::vector<double> local_dist;
-  std::vector<double> new_dist;
-
-  if (!global_dist.empty()) {
-    local_dist = global_dist;
-    new_dist = global_dist;
-  } else {
-    local_dist.clear();
-    new_dist.clear();
-  }
-
-  for (int iter = 0; iter < total_vertices; ++iter) {
-    bool changed = ProcessLocalVertices(local_dist, local_offsets_, local_columns_, local_values_, local_start,
-                                        local_num_vertices_, total_vertices, new_dist);
-
-    int global_changed = 0;
-    int local_changed_int = changed ? 1 : 0;
-    MPI_Allreduce(&local_changed_int, &global_changed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-
-    if (global_changed == 0) {
-      break;
-    }
-
-    if (!new_dist.empty() && !global_dist.empty()) {
-      UpdateDistances(global_dist, local_dist, new_dist, total_vertices);
-    }
-  }
+  PerformDijkstraIterations(local_dist, local_offsets_, local_columns_, local_values_, local_start, local_num_vertices_,
+                            total_vertices, global_dist, new_dist);
 
   GetOutput() = global_dist;
   MPI_Barrier(MPI_COMM_WORLD);
