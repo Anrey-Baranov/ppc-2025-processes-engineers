@@ -1,6 +1,7 @@
 #include "baranov_a_dijkstra_crs/seq/include/ops_seq.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <functional>
 #include <limits>
 #include <queue>

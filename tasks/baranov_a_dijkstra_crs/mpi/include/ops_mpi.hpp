@@ -23,13 +23,13 @@ class BaranovADijkstraCRSMPI : public BaseTask {
   void DistributeGraphData();
   void GatherResults();
 
-  std::vector<int> local_offsets;
-  std::vector<int> local_columns;
-  std::vector<double> local_values;
-  std::vector<int> vertex_ownership;
-  int local_num_vertices = 0;
-  int world_size = 0;
-  int world_rank = 0;
+  std::vector<int> local_offsets_;
+  std::vector<int> local_columns_;
+  std::vector<double> local_values_;
+  std::vector<int> vertex_ownership_;
+  int local_num_vertices_ = 0;
+  int world_size_ = 0;
+  int world_rank_ = 0;
 };
 
 }  // namespace baranov_a_dijkstra_crs

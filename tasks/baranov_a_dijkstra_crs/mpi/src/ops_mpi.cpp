@@ -3,6 +3,7 @@
 #include <mpi.h>
 
 #include <cmath>
+#include <cstddef>
 #include <limits>
 #include <vector>
 
@@ -64,6 +65,34 @@ void InitializeGlobalDist(std::vector<double> &global_dist, int total_vertices, 
   }
 }
 
+bool ProcessNeighbors(const std::vector<double> &local_dist, int global_v, const std::vector<int> &local_offsets, int i,
+                      const std::vector<int> &local_columns, const std::vector<double> &local_values,
+                      int total_vertices, std::vector<double> &new_dist) {
+  bool changed = false;
+  int start = local_offsets[i];
+  int end = local_offsets[i + 1];
+
+  for (int idx = start; idx < end; ++idx) {
+    if (static_cast<std::size_t>(idx) >= local_columns.size()) {
+      continue;
+    }
+
+    int neighbor = local_columns[idx];
+    double weight = local_values[idx];
+
+    if (neighbor < 0 || neighbor >= total_vertices) {
+      continue;
+    }
+
+    double new_distance = local_dist[global_v] + weight;
+    if (new_distance < new_dist[neighbor]) {
+      new_dist[neighbor] = new_distance;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 bool ProcessLocalVertices(const std::vector<double> &local_dist, const std::vector<int> &local_offsets,
                           const std::vector<int> &local_columns, const std::vector<double> &local_values,
                           int local_start, int local_num_vertices, int total_vertices, std::vector<double> &new_dist) {
@@ -87,27 +116,9 @@ bool ProcessLocalVertices(const std::vector<double> &local_dist, const std::vect
       continue;
     }
 
-    int start = local_offsets[i];
-    int end = local_offsets[i + 1];
-
-    for (int idx = start; idx < end; ++idx) {
-      if (static_cast<std::size_t>(idx) >= local_columns.size()) {
-        continue;
-      }
-
-      int neighbor = local_columns[idx];
-      double weight = local_values[idx];
-
-      if (neighbor < 0 || neighbor >= total_vertices) {
-        continue;
-      }
-
-      double new_distance = local_dist[global_v] + weight;
-      if (new_distance < new_dist[neighbor]) {
-        new_dist[neighbor] = new_distance;
-        changed = true;
-      }
-    }
+    changed = ProcessNeighbors(local_dist, global_v, local_offsets, i, local_columns, local_values, total_vertices,
+                               new_dist) ||
+              changed;
   }
 
   return changed;
@@ -135,8 +146,8 @@ bool BaranovADijkstraCRSMPI::ValidationImpl() {
 }
 
 bool BaranovADijkstraCRSMPI::PreProcessingImpl() {
-  MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &world_size_);
+  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank_);
   return true;
 }
 
@@ -146,36 +157,36 @@ void BaranovADijkstraCRSMPI::DistributeGraphData() {
 
   int local_start = 0;
   int local_end = 0;
-  CalculateVertexDistribution(world_rank, world_size, total_vertices, local_start, local_end, local_num_vertices);
+  CalculateVertexDistribution(world_rank_, world_size_, total_vertices, local_start, local_end, local_num_vertices_);
 
   if (local_end > total_vertices) {
     local_end = total_vertices;
-    local_num_vertices = local_end - local_start;
+    local_num_vertices_ = local_end - local_start;
   }
 
-  if (local_num_vertices <= 0 || local_start >= total_vertices) {
-    local_offsets.clear();
-    local_columns.clear();
-    local_values.clear();
-    InitializeVertexOwnership(vertex_ownership, total_vertices, world_size);
+  if (local_num_vertices_ <= 0 || local_start >= total_vertices) {
+    local_offsets_.clear();
+    local_columns_.clear();
+    local_values_.clear();
+    InitializeVertexOwnership(vertex_ownership_, total_vertices, world_size_);
     return;
   }
 
-  InitializeVertexOwnership(vertex_ownership, total_vertices, world_size);
-  local_offsets.resize(static_cast<std::size_t>(local_num_vertices + 1));
+  InitializeVertexOwnership(vertex_ownership_, total_vertices, world_size_);
+  local_offsets_.resize(static_cast<std::size_t>(local_num_vertices_ + 1));
 
-  for (int i = 0; i <= local_num_vertices; ++i) {
+  for (int i = 0; i <= local_num_vertices_; ++i) {
     int global_idx = local_start + i;
     if (global_idx <= total_vertices) {
-      local_offsets[static_cast<std::size_t>(i)] =
+      local_offsets_[static_cast<std::size_t>(i)] =
           graph.offsets[static_cast<std::size_t>(global_idx)] - graph.offsets[static_cast<std::size_t>(local_start)];
     } else {
-      local_offsets[static_cast<std::size_t>(i)] = graph.offsets[static_cast<std::size_t>(total_vertices)] -
-                                                   graph.offsets[static_cast<std::size_t>(local_start)];
+      local_offsets_[static_cast<std::size_t>(i)] = graph.offsets[static_cast<std::size_t>(total_vertices)] -
+                                                    graph.offsets[static_cast<std::size_t>(local_start)];
     }
   }
 
-  CopyLocalEdges(graph, local_start, local_end, total_vertices, local_columns, local_values);
+  CopyLocalEdges(graph, local_start, local_end, total_vertices, local_columns_, local_values_);
 }
 
 bool BaranovADijkstraCRSMPI::RunImpl() {
@@ -193,19 +204,19 @@ bool BaranovADijkstraCRSMPI::RunImpl() {
 
   int local_start = 0;
   int local_end = 0;
-  CalculateVertexDistribution(world_rank, world_size, total_vertices, local_start, local_end, local_num_vertices);
+  CalculateVertexDistribution(world_rank_, world_size_, total_vertices, local_start, local_end, local_num_vertices_);
 
   if (local_end > total_vertices) {
     local_end = total_vertices;
-    local_num_vertices = local_end - local_start;
+    local_num_vertices_ = local_end - local_start;
   }
 
   std::vector<double> global_dist;
-  bool i_own_source = (total_vertices > 0 && local_num_vertices > 0 && source >= local_start && source < local_end);
+  bool i_own_source = (total_vertices > 0 && local_num_vertices_ > 0 && source >= local_start && source < local_end);
   InitializeGlobalDist(global_dist, total_vertices, source, i_own_source);
 
   int source_owner = -1;
-  int my_has_source = i_own_source ? world_rank : -1;
+  int my_has_source = i_own_source ? world_rank_ : -1;
   MPI_Allreduce(&my_has_source, &source_owner, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
 
   if (source_owner >= 0 && !global_dist.empty()) {
@@ -227,8 +238,8 @@ bool BaranovADijkstraCRSMPI::RunImpl() {
   }
 
   for (int iter = 0; iter < total_vertices; ++iter) {
-    bool changed = ProcessLocalVertices(local_dist, local_offsets, local_columns, local_values, local_start,
-                                        local_num_vertices, total_vertices, new_dist);
+    bool changed = ProcessLocalVertices(local_dist, local_offsets_, local_columns_, local_values_, local_start,
+                                        local_num_vertices_, total_vertices, new_dist);
 
     int global_changed = 0;
     int local_changed_int = changed ? 1 : 0;

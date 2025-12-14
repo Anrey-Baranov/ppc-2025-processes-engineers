@@ -14,9 +14,6 @@ struct GraphData {
   std::vector<double> values;
   int num_vertices = 0;
   int source_vertex = 0;
-
-  GraphData() : num_vertices(0), source_vertex(0) {}
-  GraphData(int n, int src) : num_vertices(n), source_vertex(src) {}
 };
 
 using InType = GraphData;
