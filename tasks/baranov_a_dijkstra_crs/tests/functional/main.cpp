@@ -131,6 +131,7 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
     // НЕ вызывайте MPI_Finalize здесь!
     // Google Test сам позаботится о финализации после всех тестов
   }
+
  private:
   GraphCRS CreateSimpleGraph(int vertices, double base_weight, const std::string &type) {
     GraphCRS graph;
