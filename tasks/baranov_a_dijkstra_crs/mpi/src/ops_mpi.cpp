@@ -154,19 +154,24 @@ std::vector<T> BaranovADijkstraCrsMPI::DijkstraParallelTemplate(int vertices, co
     }
     T global_min = INF;
     int global_u = -1;
-    struct MinData {
-      T dist;
-      int vertex;
-    };
-
-    MinData local_data{local_min, local_u};
-    MinData global_data{INF, -1};
     MPI_Allreduce(&local_min, &global_min, 1, mpi_type, MPI_MIN, MPI_COMM_WORLD);
     if (global_min == INF) {
       break;
     }
-    int candidate_vertex =
-        (std::abs(local_min - global_min) < std::numeric_limits<T>::epsilon() * 10 && local_u != -1) ? local_u : -1;
+    int candidate_vertex = -1;
+
+    if (local_u != -1) {
+      if constexpr (std::is_integral_v<T>) {
+        if (local_min == global_min) {
+          candidate_vertex = local_u;
+        }
+      } else {
+        const T epsilon = std::numeric_limits<T>::epsilon() * 10;
+        if (std::abs(local_min - global_min) <= epsilon * std::max(std::abs(local_min), std::abs(global_min))) {
+          candidate_vertex = local_u;
+        }
+      }
+    }
     MPI_Allreduce(&candidate_vertex, &global_u, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
 
     if (global_u == -1) {
