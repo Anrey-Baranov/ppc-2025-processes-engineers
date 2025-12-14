@@ -221,8 +221,13 @@ bool BaranovADijkstraCRSMPI::RunImpl() {
     return true;
   }
 
-  std::vector<double> local_dist = global_dist;
-  std::vector<double> new_dist = global_dist;
+  std::vector<double> local_dist;
+  std::vector<double> new_dist;
+
+  if (!global_dist.empty()) {
+    local_dist = global_dist;
+    new_dist = global_dist;
+  }
 
   for (int iter = 0; iter < total_vertices; ++iter) {
     bool changed = ProcessLocalVertices(local_dist, local_offsets, local_columns, local_values, local_start,
@@ -235,10 +240,17 @@ bool BaranovADijkstraCRSMPI::RunImpl() {
     if (global_changed == 0) {
       break;
     }
+    if (!new_dist.empty() && !global_dist.empty()) {
+      MPI_Allreduce(new_dist.data(), global_dist.data(), total_vertices, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
 
-    MPI_Allreduce(new_dist.data(), global_dist.data(), total_vertices, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-    local_dist = global_dist;
-    new_dist = global_dist;
+      if (!global_dist.empty() && !local_dist.empty() && global_dist.size() == local_dist.size()) {
+        local_dist.assign(global_dist.begin(), global_dist.end());
+      }
+
+      if (!global_dist.empty() && !new_dist.empty() && global_dist.size() == new_dist.size()) {
+        new_dist.assign(global_dist.begin(), global_dist.end());
+      }
+    }
   }
 
   GetOutput() = global_dist;
