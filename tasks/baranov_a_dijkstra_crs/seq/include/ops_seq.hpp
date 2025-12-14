@@ -12,6 +12,9 @@ class BaranovADijkstraCrsSEQ : public BaseTask {
   }
   explicit BaranovADijkstraCrsSEQ(const InType &in);
 
+  // Убираем деструктор
+  ~BaranovADijkstraCrsSEQ() override = default;
+
  private:
   bool ValidationImpl() override;
   bool PreProcessingImpl() override;

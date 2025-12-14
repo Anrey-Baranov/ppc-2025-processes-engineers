@@ -27,9 +27,15 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
   }
 
  protected:
-  BaranovADijkstraCrsFuncTests() {}
+  BaranovADijkstraCrsFuncTests() {
+    std::cout << "[DEBUG] BaranovADijkstraCrsFuncTests constructor" << std::endl;
+  }
+  ~BaranovADijkstraCrsFuncTests() {
+    std::cout << "[DEBUG] BaranovADijkstraCrsFuncTests destructor" << std::endl;
+  }
 
   void SetUp() override {
+    std::cout << "[DEBUG] BaranovADijkstraCrsFuncTests::SetUp called" << std::endl;
     auto param = GetParam();
     TestType test_param = std::get<2>(param);
     int test_case = std::get<0>(test_param);
@@ -101,8 +107,6 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
         input_data_ = CreateSimpleGraph(3, 1, "int");
       } break;
     }
-
-    // Для SEQ тестов вычисляем ожидаемый результат
     if (!is_mpi_test_) {
       BaranovADijkstraCrsSEQ seq_task(input_data_);
       if (seq_task.Validation() && seq_task.PreProcessing()) {
@@ -110,8 +114,23 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
         expected_output_ = seq_task.GetOutput();
       }
     }
+    std::cout << "[DEBUG] Test setup complete, is_mpi_test_ = " << is_mpi_test_ << std::endl;
   }
+  void TearDown() override {
+    std::cout << "[DEBUG] BaranovADijkstraCrsFuncTests::TearDown called" << std::endl;
 
+    // Проверим состояние MPI - но не вызывайте MPI_Finalize здесь!
+    int mpi_initialized = 0;
+    MPI_Initialized(&mpi_initialized);
+    int mpi_finalized = 0;
+    MPI_Finalized(&mpi_finalized);
+
+    std::cout << "[DEBUG] TearDown: MPI initialized = " << mpi_initialized << ", MPI finalized = " << mpi_finalized
+              << std::endl;
+
+    // НЕ вызывайте MPI_Finalize здесь!
+    // Google Test сам позаботится о финализации после всех тестов
+  }
  private:
   GraphCRS CreateSimpleGraph(int vertices, double base_weight, const std::string &type) {
     GraphCRS graph;
@@ -233,7 +252,6 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
 
     graph.row_ptr.push_back(0);
     for (int i = 0; i < vertices; ++i) {
-      // Вершина 0 связана только с вершиной 1
       if (i == 0 && vertices > 1) {
         graph.col_idx.push_back(1);
       }
@@ -376,7 +394,7 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
   }
 
   template <typename T>
-  bool CompareVectors(const std::vector<T> &a, const std::vector<T> &b, double epsilon) {
+  static bool CompareVectors(const std::vector<T> &a, const std::vector<T> &b, double epsilon) {
     if (a.size() != b.size()) {
       return false;
     }
@@ -417,13 +435,30 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
   bool CheckTestOutputData(OutType &output_data) final {
     try {
       if (is_mpi_test_) {
-        // Для MPI тестов проверяем корректность структуры
+        // Для MPI тестов проверяем инициализацию MPI
         int mpi_initialized = 0;
         MPI_Initialized(&mpi_initialized);
+
+        // Если MPI не инициализирован, делаем простую проверку
         if (!mpi_initialized) {
-          return true;
+          // Безопасная проверка без использования MPI
+          if (std::holds_alternative<std::vector<int>>(output_data)) {
+            auto output = std::get<std::vector<int>>(output_data);
+            const auto &graph = std::get<GraphCRS>(input_data_);
+            return !output.empty() && output.size() == static_cast<size_t>(graph.vertices);
+          } else if (std::holds_alternative<std::vector<float>>(output_data)) {
+            auto output = std::get<std::vector<float>>(output_data);
+            const auto &graph = std::get<GraphCRS>(input_data_);
+            return !output.empty() && output.size() == static_cast<size_t>(graph.vertices);
+          } else if (std::holds_alternative<std::vector<double>>(output_data)) {
+            auto output = std::get<std::vector<double>>(output_data);
+            const auto &graph = std::get<GraphCRS>(input_data_);
+            return !output.empty() && output.size() == static_cast<size_t>(graph.vertices);
+          }
+          return false;
         }
 
+        // Если MPI инициализирован, делаем полную проверку
         if (std::holds_alternative<std::vector<int>>(output_data)) {
           auto output = std::get<std::vector<int>>(output_data);
           const auto &graph = std::get<GraphCRS>(input_data_);

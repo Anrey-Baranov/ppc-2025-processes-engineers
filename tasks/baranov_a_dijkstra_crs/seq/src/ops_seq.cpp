@@ -16,6 +16,7 @@ BaranovADijkstraCrsSEQ::BaranovADijkstraCrsSEQ(const InType &in) {
 }
 
 bool BaranovADijkstraCrsSEQ::ValidationImpl() {
+  std::cout << "[DEBUG] BaranovADijkstraCrsSEQ::ValidationImpl called" << std::endl;
   try {
     if (!std::holds_alternative<GraphCRS>(GetInput())) {
       return false;
@@ -41,6 +42,7 @@ bool BaranovADijkstraCrsSEQ::ValidationImpl() {
 }
 
 bool BaranovADijkstraCrsSEQ::PreProcessingImpl() {
+  std::cout << "[DEBUG] BaranovADijkstraCrsSEQ::PreProcessingImpl called" << std::endl;
   return true;
 }
 
@@ -87,6 +89,7 @@ std::vector<T> BaranovADijkstraCrsSEQ::DijkstraSequentialTemplate(int vertices, 
 }
 
 bool BaranovADijkstraCrsSEQ::RunImpl() {
+  std::cout << "[DEBUG] BaranovADijkstraCrsSEQ::RunImpl called" << std::endl;
   try {
     const auto &graph = std::get<GraphCRS>(GetInput());
 
@@ -119,6 +122,7 @@ bool BaranovADijkstraCrsSEQ::RunImpl() {
 }
 
 bool BaranovADijkstraCrsSEQ::PostProcessingImpl() {
+  std::cout << "[DEBUG] BaranovADijkstraCrsSEQ::PostProcessingImpl called" << std::endl;
   return true;
 }
 
