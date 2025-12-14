@@ -244,8 +244,16 @@ bool BaranovADijkstraCRSMPI::RunImpl() {
     return true;
   }
 
-  std::vector<double> local_dist = global_dist;
-  std::vector<double> new_dist = global_dist;
+  std::vector<double> local_dist;
+  std::vector<double> new_dist;
+
+  if (!global_dist.empty()) {
+    local_dist = global_dist;
+    new_dist = global_dist;
+  } else {
+    local_dist.clear();
+    new_dist.clear();
+  }
 
   for (int iter = 0; iter < total_vertices; ++iter) {
     bool changed = ProcessLocalVertices(local_dist, local_offsets_, local_columns_, local_values_, local_start,
