@@ -119,6 +119,12 @@ bool BaranovADijkstraCRSMPI::RunImpl() {
   const int total_vertices = graph.num_vertices;
   const int source = graph.source_vertex;
 
+  if (total_vertices <= 0) {
+    GetOutput() = std::vector<double>();
+    MPI_Barrier(MPI_COMM_WORLD);
+    return true;
+  }
+
   DistributeGraphData();
   int local_start, local_end;
   CalculateVertexDistribution(world_rank, world_size, total_vertices, local_start, local_end, local_num_vertices);
@@ -128,9 +134,13 @@ bool BaranovADijkstraCRSMPI::RunImpl() {
     local_num_vertices = local_end - local_start;
   }
 
-  std::vector<double> global_dist(total_vertices, std::numeric_limits<double>::infinity());
+  std::vector<double> global_dist;
+  if (total_vertices > 0) {
+    global_dist.resize(total_vertices, std::numeric_limits<double>::infinity());
+  }
+
   bool i_own_source = false;
-  if (local_num_vertices > 0 && source >= local_start && source < local_end) {
+  if (total_vertices > 0 && local_num_vertices > 0 && source >= local_start && source < local_end) {
     i_own_source = true;
     global_dist[source] = 0.0;
   }
@@ -139,7 +149,7 @@ bool BaranovADijkstraCRSMPI::RunImpl() {
   int my_has_source = i_own_source ? world_rank : -1;
   MPI_Allreduce(&my_has_source, &source_owner, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
 
-  if (source_owner >= 0) {
+  if (source_owner >= 0 && !global_dist.empty()) {
     MPI_Bcast(global_dist.data(), total_vertices, MPI_DOUBLE, source_owner, MPI_COMM_WORLD);
   }
 
@@ -149,12 +159,17 @@ bool BaranovADijkstraCRSMPI::RunImpl() {
     return true;
   }
 
-  std::vector<double> local_dist = global_dist;
+  std::vector<double> local_dist;
+  if (!global_dist.empty()) {
+    local_dist = global_dist;
+  } else {
+    local_dist = std::vector<double>();
+  }
 
   for (int iter = 0; iter < total_vertices; ++iter) {
     bool changed = false;
 
-    if (local_num_vertices > 0 && local_start < total_vertices) {
+    if (local_num_vertices > 0 && local_start < total_vertices && !local_dist.empty()) {
       for (int i = 0; i < local_num_vertices; ++i) {
         int global_v = local_start + i;
         if (global_v >= total_vertices) {
@@ -189,11 +204,14 @@ bool BaranovADijkstraCRSMPI::RunImpl() {
     if (global_changed == 0) {
       break;
     }
-    MPI_Allreduce(local_dist.data(), global_dist.data(), total_vertices, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+    if (!local_dist.empty()) {
+      MPI_Allreduce(local_dist.data(), global_dist.data(), total_vertices, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+    }
     if (!global_dist.empty() && !local_dist.empty() && global_dist.size() == local_dist.size()) {
       local_dist = global_dist;
     }
   }
+
   GetOutput() = global_dist;
   MPI_Barrier(MPI_COMM_WORLD);
   return true;
