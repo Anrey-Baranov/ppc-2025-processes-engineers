@@ -1,6 +1,5 @@
 #include "baranov_a_dijkstra_crs/seq/include/ops_seq.hpp"
 
-#include <algorithm>
 #include <cstddef>
 #include <functional>
 #include <limits>
@@ -26,7 +25,7 @@ bool BaranovADijkstraCRSSEQ::ValidationImpl() {
   if (input.source_vertex < 0 || input.source_vertex >= input.num_vertices) {
     return false;
   }
-  if (input.offsets.size() != static_cast<std::size_t>(input.num_vertices + 1)) {
+  if (input.offsets.size() != static_cast<std::size_t>(input.num_vertices) + 1) {
     return false;
   }
   return true;

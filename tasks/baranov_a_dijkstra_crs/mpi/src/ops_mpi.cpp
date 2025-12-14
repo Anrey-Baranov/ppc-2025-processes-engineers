@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstddef>
 #include <limits>
+#include <utility>
 #include <vector>
 
 #include "baranov_a_dijkstra_crs/common/include/common.hpp"
@@ -59,7 +60,7 @@ void CopyLocalEdges(const GraphData &graph, int local_start, int local_end, int 
 void InitializeGlobalDist(std::vector<double> &global_dist, int total_vertices, int source, bool i_own_source) {
   if (total_vertices > 0) {
     global_dist.resize(total_vertices, std::numeric_limits<double>::infinity());
-    if (i_own_source && !global_dist.empty() && source >= 0 && source < static_cast<int>(global_dist.size())) {
+    if (i_own_source && !global_dist.empty() && source >= 0 && static_cast<std::size_t>(source) < global_dist.size()) {
       global_dist[source] = 0.0;
     }
   }
@@ -173,7 +174,7 @@ void BaranovADijkstraCRSMPI::DistributeGraphData() {
   }
 
   InitializeVertexOwnership(vertex_ownership_, total_vertices, world_size_);
-  local_offsets_.resize(static_cast<std::size_t>(local_num_vertices_ + 1));
+  local_offsets_.resize(static_cast<std::size_t>(local_num_vertices_) + 1);
 
   for (int i = 0; i <= local_num_vertices_; ++i) {
     int global_idx = local_start + i;
