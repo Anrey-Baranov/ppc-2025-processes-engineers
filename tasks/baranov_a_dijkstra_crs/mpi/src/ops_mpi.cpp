@@ -126,7 +126,6 @@ std::vector<T> BaranovADijkstraCrsMPI::DijkstraParallelTemplate(int vertices, co
 
   const T INF = std::numeric_limits<T>::max();
   std::vector<T> dist(vertices, INF);
-
   if (rank == 0) {
     dist[source] = static_cast<T>(0);
   }
@@ -139,7 +138,6 @@ std::vector<T> BaranovADijkstraCrsMPI::DijkstraParallelTemplate(int vertices, co
   } else {
     mpi_type = MPI_DOUBLE;
   }
-
   TreeBroadcast(dist, vertices, 0, mpi_type, MPI_COMM_WORLD);
 
   std::vector<bool> visited(vertices, false);
@@ -163,35 +161,15 @@ std::vector<T> BaranovADijkstraCrsMPI::DijkstraParallelTemplate(int vertices, co
 
     MinData local_data{local_min, local_u};
     MinData global_data{INF, -1};
-    MPI_Datatype minloc_type;
-    MPI_Type_contiguous(2, MPI_INT, &minloc_type);
-
-    if constexpr (std::is_same_v<T, int>) {
-      MPI_Op minloc_op;
-      MPI_Op_create([](void *invec, void *inoutvec, int *len, MPI_Datatype *datatype) {
-        MinData *in = static_cast<MinData *>(invec);
-        MinData *inout = static_cast<MinData *>(inoutvec);
-
-        for (int i = 0; i < *len; i++) {
-          if (in[i].dist < inout[i].dist) {
-            inout[i] = in[i];
-          }
-        }
-      }, 1, &minloc_op);
-
-      MPI_Allreduce(&local_data, &global_data, 1, minloc_type, minloc_op, MPI_COMM_WORLD);
-      MPI_Op_free(&minloc_op);
-    } else {
-      MPI_Allreduce(&local_min, &global_min, 1, mpi_type, MPI_MIN, MPI_COMM_WORLD);
-      if (local_min == global_min && local_u != -1) {
-        global_u = local_u;
-      }
-      MPI_Allreduce(MPI_IN_PLACE, &global_u, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(&local_min, &global_min, 1, mpi_type, MPI_MIN, MPI_COMM_WORLD);
+    if (global_min == INF) {
+      break;
     }
+    int candidate_vertex =
+        (std::abs(local_min - global_min) < std::numeric_limits<T>::epsilon() * 10 && local_u != -1) ? local_u : -1;
+    MPI_Allreduce(&candidate_vertex, &global_u, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
 
-    MPI_Type_free(&minloc_type);
-
-    if (global_u == -1 || global_min == INF) {
+    if (global_u == -1) {
       break;
     }
 
