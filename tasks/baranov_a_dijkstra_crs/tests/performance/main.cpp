@@ -27,10 +27,8 @@ class BaranovADijkstraCrsPerfTests : public ppc::util::BaseRunPerfTests<InType, 
     graph.vertices = vertices;
     graph.source = 0;
 
-    // Создаем разреженный граф
     graph.row_ptr.push_back(0);
     for (int i = 0; i < vertices; ++i) {
-      // Каждая вершина связана с 3 следующими
       for (int offset = 1; offset <= 3 && i + offset < vertices; ++offset) {
         graph.col_idx.push_back(i + offset);
       }
@@ -45,14 +43,14 @@ class BaranovADijkstraCrsPerfTests : public ppc::util::BaseRunPerfTests<InType, 
   bool CheckTestOutputData(OutType &output_data) final {
     try {
       if (std::holds_alternative<std::vector<int>>(output_data)) {
-        auto output = std::get<std::vector<int>>(output_data);
-        return !output.empty() && output[0] == 0;
+        const auto &output = std::get<std::vector<int>>(output_data);
+        return !output.empty() && output.at(0) == 0;
       } else if (std::holds_alternative<std::vector<float>>(output_data)) {
-        auto output = std::get<std::vector<float>>(output_data);
-        return !output.empty() && std::fabs(output[0]) < 1e-6;
+        const auto &output = std::get<std::vector<float>>(output_data);
+        return !output.empty() && std::fabs(output.at(0)) < 1e-6;
       } else if (std::holds_alternative<std::vector<double>>(output_data)) {
-        auto output = std::get<std::vector<double>>(output_data);
-        return !output.empty() && std::fabs(output[0]) < 1e-9;
+        const auto &output = std::get<std::vector<double>>(output_data);
+        return !output.empty() && std::fabs(output.at(0)) < 1e-9;
       }
 
       return false;
