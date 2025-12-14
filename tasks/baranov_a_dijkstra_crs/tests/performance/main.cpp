@@ -20,18 +20,23 @@ class BaranovADijkstraCrsPerfTests : public ppc::util::BaseRunPerfTests<InType, 
     auto param = GetParam();
     std::string task_name = std::get<1>(param);
     is_mpi_test_ = (task_name.find("mpi") != std::string::npos);
-    int vertices = 10;
+
+    int vertices = is_mpi_test_ ? 200 : 100;
 
     GraphCRS graph;
     graph.vertices = vertices;
     graph.source = 0;
+
+    // Создаем разреженный граф
     graph.row_ptr.push_back(0);
     for (int i = 0; i < vertices; ++i) {
-      if (i < vertices - 1) {
-        graph.col_idx.push_back(i + 1);
+      // Каждая вершина связана с 3 следующими
+      for (int offset = 1; offset <= 3 && i + offset < vertices; ++offset) {
+        graph.col_idx.push_back(i + offset);
       }
       graph.row_ptr.push_back(graph.col_idx.size());
     }
+
     graph.weights = 1;
 
     input_data_ = graph;
@@ -39,12 +44,18 @@ class BaranovADijkstraCrsPerfTests : public ppc::util::BaseRunPerfTests<InType, 
 
   bool CheckTestOutputData(OutType &output_data) final {
     try {
-      auto output_vec = std::get<std::vector<double>>(output_data);
-
-      if (output_vec.empty()) {
-        return false;
+      if (std::holds_alternative<std::vector<int>>(output_data)) {
+        auto output = std::get<std::vector<int>>(output_data);
+        return !output.empty() && output[0] == 0;
+      } else if (std::holds_alternative<std::vector<float>>(output_data)) {
+        auto output = std::get<std::vector<float>>(output_data);
+        return !output.empty() && std::fabs(output[0]) < 1e-6;
+      } else if (std::holds_alternative<std::vector<double>>(output_data)) {
+        auto output = std::get<std::vector<double>>(output_data);
+        return !output.empty() && std::fabs(output[0]) < 1e-9;
       }
-      return output_vec[0] == 0.0;
+
+      return false;
 
     } catch (const std::exception &) {
       return false;

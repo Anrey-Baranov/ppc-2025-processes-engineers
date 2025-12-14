@@ -2,23 +2,22 @@
 
 #include <string>
 #include <tuple>
+#include <variant>
 #include <vector>
 
 #include "task/include/task.hpp"
 
 namespace baranov_a_dijkstra_crs {
 
-using WeightTypeVariant = std::variant<int, float, double>;
-
 struct GraphCRS {
   int vertices;
   std::vector<int> row_ptr;
   std::vector<int> col_idx;
-  WeightTypeVariant weights;
+  std::variant<int, float, double> weights;
   int source;
 };
 
-using InTypeVariant = std::variant<GraphCRS, int, std::vector<int>>;
+using InTypeVariant = std::variant<GraphCRS>;
 
 using InType = InTypeVariant;
 using OutType = std::variant<std::vector<int>, std::vector<float>, std::vector<double>>;

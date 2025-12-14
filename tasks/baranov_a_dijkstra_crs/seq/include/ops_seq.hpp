@@ -21,7 +21,6 @@ class BaranovADijkstraCrsSEQ : public BaseTask {
   template <typename T>
   std::vector<T> DijkstraSequentialTemplate(int vertices, const std::vector<int> &row_ptr,
                                             const std::vector<int> &col_idx, const std::vector<T> &values, int source);
-  bool ValidateGraph(const GraphCRS &graph);
 };
 
 }  // namespace baranov_a_dijkstra_crs

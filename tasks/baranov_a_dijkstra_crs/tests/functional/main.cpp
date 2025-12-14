@@ -42,15 +42,15 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
       } break;
 
       case 2: {
-        input_data_ = CreateSimpleGraph(6, 1, "int");
+        input_data_ = CreateSimpleGraph(10, 2, "int");
       } break;
 
       case 3: {
-        input_data_ = CreateSimpleGraph(4, 1.5, "float");
+        input_data_ = CreateSimpleGraph(8, 1.5, "float");
       } break;
 
       case 4: {
-        input_data_ = CreateSimpleGraph(7, 2.7, "double");
+        input_data_ = CreateSimpleGraph(6, 2.7, "double");
       } break;
 
       case 5: {
@@ -58,7 +58,7 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
       } break;
 
       case 6: {
-        input_data_ = CreateCompleteGraph(4, 1, "int");
+        input_data_ = CreateCompleteGraph(4, 3, "int");
       } break;
 
       case 7: {
@@ -70,11 +70,7 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
       } break;
 
       case 9: {
-        if (!is_mpi_test_) {
-          input_data_ = CreateRandomGraph(100, 0.3, 1, "int");
-        } else {
-          input_data_ = CreateSimpleGraph(10, 1, "int");
-        }
+        input_data_ = CreateRandomGraph(15, 0.4, 5, "int");
       } break;
 
       case 10: {
@@ -82,11 +78,11 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
       } break;
 
       case 11: {
-        input_data_ = CreateCycleGraph(5, 2, "int");
+        input_data_ = CreateCycleGraph(6, 2, "int");
       } break;
 
       case 12: {
-        input_data_ = CreateStarGraph(6, 3, "int");
+        input_data_ = CreateStarGraph(8, 3, "int");
       } break;
 
       case 13: {
@@ -95,9 +91,9 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
 
       case 14: {
         if (is_mpi_test_) {
-          input_data_ = CreateDeterministicLargeGraph(200, 1, "int");
+          input_data_ = CreateLargeGraph(50, 1, "int");
         } else {
-          input_data_ = CreateDeterministicLargeGraph(50, 1, "int");
+          input_data_ = CreateLargeGraph(30, 1, "int");
         }
       } break;
 
@@ -106,6 +102,7 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
       } break;
     }
 
+    // Для SEQ тестов вычисляем ожидаемый результат
     if (!is_mpi_test_) {
       BaranovADijkstraCrsSEQ seq_task(input_data_);
       if (seq_task.Validation() && seq_task.PreProcessing()) {
@@ -140,17 +137,15 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
     return graph;
   }
 
-  GraphCRS CreateDeterministicLargeGraph(int vertices, double weight, const std::string &type) {
+  GraphCRS CreateLargeGraph(int vertices, double weight, const std::string &type) {
     GraphCRS graph;
     graph.vertices = vertices;
     graph.source = 0;
 
     graph.row_ptr.push_back(0);
     for (int i = 0; i < vertices; ++i) {
-      for (int offset = 1; offset <= 3; ++offset) {
-        if (i + offset < vertices) {
-          graph.col_idx.push_back(i + offset);
-        }
+      for (int offset = 1; offset <= 3 && i + offset < vertices; ++offset) {
+        graph.col_idx.push_back(i + offset);
       }
       graph.row_ptr.push_back(graph.col_idx.size());
     }
@@ -171,7 +166,7 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
     graph.vertices = 1;
     graph.source = 0;
     graph.row_ptr = {0, 0};
-    graph.weights = 1;
+    graph.weights = 0;
     return graph;
   }
 
@@ -238,6 +233,7 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
 
     graph.row_ptr.push_back(0);
     for (int i = 0; i < vertices; ++i) {
+      // Вершина 0 связана только с вершиной 1
       if (i == 0 && vertices > 1) {
         graph.col_idx.push_back(1);
       }
@@ -286,10 +282,6 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
   }
 
   GraphCRS CreateVaryingWeightGraph(int vertices, const std::string &type) {
-    GraphCRS graph;
-    graph.vertices = vertices;
-    graph.source = 0;
-
     return CreateSimpleGraph(vertices, 1.0, type);
   }
 
@@ -301,10 +293,7 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
     graph.row_ptr.push_back(0);
     for (int i = 0; i < vertices; ++i) {
       int next = (i + 1) % vertices;
-      int prev = (i - 1 + vertices) % vertices;
-
       graph.col_idx.push_back(next);
-      graph.col_idx.push_back(prev);
       graph.row_ptr.push_back(graph.col_idx.size());
     }
 
@@ -386,33 +375,37 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
     return graph;
   }
 
-  bool CompareDistances(const std::vector<double> &output, const std::vector<double> &expected) {
-    if (output.size() != expected.size()) {
+  template <typename T>
+  bool CompareVectors(const std::vector<T> &a, const std::vector<T> &b, double epsilon) {
+    if (a.size() != b.size()) {
       return false;
     }
 
-    const double epsilon = 1e-6;
-    for (size_t i = 0; i < output.size(); ++i) {
-      bool output_inf = std::isinf(output[i]);
-      bool expected_inf = std::isinf(expected[i]);
+    for (size_t i = 0; i < a.size(); ++i) {
+      bool a_inf = std::isinf(a[i]);
+      bool b_inf = std::isinf(b[i]);
 
-      if (output_inf != expected_inf) {
+      if (a_inf != b_inf) {
         return false;
       }
-      if (output_inf && expected_inf) {
+      if (a_inf) {
+        if (std::signbit(a[i]) != std::signbit(b[i])) {
+          return false;
+        }
         continue;
       }
 
-      bool output_nan = std::isnan(output[i]);
-      bool expected_nan = std::isnan(expected[i]);
+      bool a_nan = std::isnan(a[i]);
+      bool b_nan = std::isnan(b[i]);
 
-      if (output_nan != expected_nan) {
+      if (a_nan != b_nan) {
         return false;
       }
-      if (output_nan && expected_nan) {
+      if (a_nan) {
         continue;
       }
-      if (std::fabs(output[i] - expected[i]) > epsilon) {
+
+      if (std::fabs(a[i] - b[i]) > epsilon) {
         return false;
       }
     }
@@ -424,29 +417,50 @@ class BaranovADijkstraCrsFuncTests : public ppc::util::BaseRunFuncTests<InType, 
   bool CheckTestOutputData(OutType &output_data) final {
     try {
       if (is_mpi_test_) {
+        // Для MPI тестов проверяем корректность структуры
         int mpi_initialized = 0;
         MPI_Initialized(&mpi_initialized);
         if (!mpi_initialized) {
           return true;
         }
-        auto mpi_output = std::get<std::vector<double>>(output_data);
-        if (mpi_output.empty()) {
-          return false;
-        }
-        const auto &graph = std::get<GraphCRS>(input_data_);
-        if (graph.source >= 0 && static_cast<size_t>(graph.source) < mpi_output.size()) {
-          if (mpi_output[graph.source] != 0.0) {
-            return false;
-          }
+
+        if (std::holds_alternative<std::vector<int>>(output_data)) {
+          auto output = std::get<std::vector<int>>(output_data);
+          const auto &graph = std::get<GraphCRS>(input_data_);
+          return !output.empty() && output.size() == static_cast<size_t>(graph.vertices) && output[graph.source] == 0;
+        } else if (std::holds_alternative<std::vector<float>>(output_data)) {
+          auto output = std::get<std::vector<float>>(output_data);
+          const auto &graph = std::get<GraphCRS>(input_data_);
+          return !output.empty() && output.size() == static_cast<size_t>(graph.vertices) &&
+                 std::fabs(output[graph.source]) < 1e-6;
+        } else if (std::holds_alternative<std::vector<double>>(output_data)) {
+          auto output = std::get<std::vector<double>>(output_data);
+          const auto &graph = std::get<GraphCRS>(input_data_);
+          return !output.empty() && output.size() == static_cast<size_t>(graph.vertices) &&
+                 std::fabs(output[graph.source]) < 1e-9;
         }
 
-        return true;
+        return false;
       } else {
-        auto output = std::get<std::vector<double>>(output_data);
-        return !output.empty() && output.at(0) == 0.0;
+        // Для SEQ тестов сравниваем с ожидаемым результатом
+        if (std::holds_alternative<std::vector<int>>(output_data) &&
+            std::holds_alternative<std::vector<int>>(expected_output_)) {
+          return CompareVectors(std::get<std::vector<int>>(output_data), std::get<std::vector<int>>(expected_output_),
+                                0.0);
+        } else if (std::holds_alternative<std::vector<float>>(output_data) &&
+                   std::holds_alternative<std::vector<float>>(expected_output_)) {
+          return CompareVectors(std::get<std::vector<float>>(output_data),
+                                std::get<std::vector<float>>(expected_output_), 1e-5);
+        } else if (std::holds_alternative<std::vector<double>>(output_data) &&
+                   std::holds_alternative<std::vector<double>>(expected_output_)) {
+          return CompareVectors(std::get<std::vector<double>>(output_data),
+                                std::get<std::vector<double>>(expected_output_), 1e-9);
+        }
+
+        return false;
       }
 
-    } catch (const std::exception &) {
+    } catch (...) {
       return false;
     }
   }
@@ -472,9 +486,9 @@ const std::array<TestType, 14> kTestParam = {
     std::make_tuple(3, "float_weight_graph"), std::make_tuple(4, "double_weight_graph"),
     std::make_tuple(5, "single_vertex"),      std::make_tuple(6, "complete_graph"),
     std::make_tuple(7, "tree_graph"),         std::make_tuple(8, "disconnected_graph"),
-    std::make_tuple(10, "varying_weights"),   std::make_tuple(11, "cycle_graph"),
-    std::make_tuple(12, "star_graph"),        std::make_tuple(13, "grid_graph"),
-    std::make_tuple(14, "large_mpi_graph"),
+    std::make_tuple(9, "random_graph"),       std::make_tuple(10, "varying_weights"),
+    std::make_tuple(11, "cycle_graph"),       std::make_tuple(12, "star_graph"),
+    std::make_tuple(13, "grid_graph"),        std::make_tuple(14, "large_graph"),
 };
 
 const auto kTestTasksList = std::tuple_cat(

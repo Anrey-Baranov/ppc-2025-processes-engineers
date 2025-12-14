@@ -7,7 +7,6 @@
 #include <variant>
 
 #include "baranov_a_dijkstra_crs/common/include/common.hpp"
-#include "util/include/util.hpp"
 
 namespace baranov_a_dijkstra_crs {
 
@@ -21,35 +20,24 @@ bool BaranovADijkstraCrsSEQ::ValidationImpl() {
     if (!std::holds_alternative<GraphCRS>(GetInput())) {
       return false;
     }
+
     const auto &graph = std::get<GraphCRS>(GetInput());
-    return ValidateGraph(graph);
+
+    if (graph.vertices <= 0) {
+      return false;
+    }
+    if (graph.source < 0 || graph.source >= graph.vertices) {
+      return false;
+    }
+    if (graph.row_ptr.size() != static_cast<size_t>(graph.vertices) + 1) {
+      return false;
+    }
+
+    return true;
 
   } catch (...) {
     return false;
   }
-}
-
-bool BaranovADijkstraCrsSEQ::ValidateGraph(const GraphCRS &graph) {
-  if (graph.vertices <= 0) {
-    return false;
-  }
-  if (graph.source < 0 || static_cast<size_t>(graph.source) >= static_cast<size_t>(graph.vertices)) {
-    return false;
-  }
-  if (graph.row_ptr.empty() || graph.row_ptr.size() != static_cast<size_t>(graph.vertices) + 1) {
-    return false;
-  }
-  for (int col : graph.col_idx) {
-    if (col < 0 || static_cast<size_t>(col) >= static_cast<size_t>(graph.vertices)) {
-      return false;
-    }
-  }
-  if (!std::holds_alternative<int>(graph.weights) && !std::holds_alternative<float>(graph.weights) &&
-      !std::holds_alternative<double>(graph.weights)) {
-    return false;
-  }
-
-  return true;
 }
 
 bool BaranovADijkstraCrsSEQ::PreProcessingImpl() {
@@ -101,22 +89,27 @@ std::vector<T> BaranovADijkstraCrsSEQ::DijkstraSequentialTemplate(int vertices, 
 bool BaranovADijkstraCrsSEQ::RunImpl() {
   try {
     const auto &graph = std::get<GraphCRS>(GetInput());
-    std::vector<double> weights_double(graph.col_idx.size());
 
     if (std::holds_alternative<int>(graph.weights)) {
       int weight = std::get<int>(graph.weights);
-      std::fill(weights_double.begin(), weights_double.end(), static_cast<double>(weight));
+      std::vector<int> values(graph.col_idx.size(), weight);
+      auto result = DijkstraSequentialTemplate<int>(graph.vertices, graph.row_ptr, graph.col_idx, values, graph.source);
+      GetOutput() = result;
     } else if (std::holds_alternative<float>(graph.weights)) {
       float weight = std::get<float>(graph.weights);
-      std::fill(weights_double.begin(), weights_double.end(), static_cast<double>(weight));
+      std::vector<float> values(graph.col_idx.size(), weight);
+      auto result =
+          DijkstraSequentialTemplate<float>(graph.vertices, graph.row_ptr, graph.col_idx, values, graph.source);
+      GetOutput() = result;
     } else if (std::holds_alternative<double>(graph.weights)) {
       double weight = std::get<double>(graph.weights);
-      std::fill(weights_double.begin(), weights_double.end(), weight);
+      std::vector<double> values(graph.col_idx.size(), weight);
+      auto result =
+          DijkstraSequentialTemplate<double>(graph.vertices, graph.row_ptr, graph.col_idx, values, graph.source);
+      GetOutput() = result;
+    } else {
+      return false;
     }
-    auto result_double =
-        DijkstraSequentialTemplate<double>(graph.vertices, graph.row_ptr, graph.col_idx, weights_double, graph.source);
-
-    GetOutput() = result_double;
 
     return true;
 
