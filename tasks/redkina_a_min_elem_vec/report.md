@@ -427,3 +427,4 @@ bool RedkinaAMinElemVecMPI::PostProcessingImpl() {
 
 }  // namespace redkina_a_min_elem_vec
 ```
+

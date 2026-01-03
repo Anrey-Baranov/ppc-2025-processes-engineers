@@ -21,6 +21,10 @@ jobs:
           cmake -S . -B build -G Ninja -D CMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl
           -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
           -D CMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_INSTALL_PREFIX=install
+          -DCMAKE_NINJA_FORCE_RESPONSE_FILE=ON
+          -DCMAKE_CXX_USE_RESPONSE_FILE_FOR_INCLUDES=ON
+          -DCMAKE_CXX_USE_RESPONSE_FILE_FOR_OBJECTS=ON
+          -DCMAKE_CXX_USE_RESPONSE_FILE_FOR_LIBRARIES=ON
       - name: Build project
         shell: bash
         run: |
@@ -103,6 +107,10 @@ jobs:
           -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
           -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=install
           -D CMAKE_PREFIX_PATH="C:/Program Files/LLVM"
+          -DCMAKE_NINJA_FORCE_RESPONSE_FILE=ON
+          -DCMAKE_CXX_USE_RESPONSE_FILE_FOR_INCLUDES=ON
+          -DCMAKE_CXX_USE_RESPONSE_FILE_FOR_OBJECTS=ON
+          -DCMAKE_CXX_USE_RESPONSE_FILE_FOR_LIBRARIES=ON
         env:
           CC: clang-cl
           CXX: clang-cl
